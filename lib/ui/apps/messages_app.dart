@@ -116,6 +116,8 @@ class _MessagesAppState extends State<MessagesApp> {
 
   Widget _chat(BuildContext context, Deal d) {
     final open = d.status == 'open';
+    final online = context.watch<GameState>().online;
+    final canSend = open && online && !d.busy;
     final base = d.market;
     final quick = d.kind == 'buy' ? [0.7, 0.8, 0.9] : [1.0, 1.1, 1.2];
     return AppPage(
@@ -139,6 +141,20 @@ class _MessagesAppState extends State<MessagesApp> {
               ],
             ),
           ),
+          if (!online)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Panel(
+                padding: const EdgeInsets.all(10),
+                child: Row(children: [
+                  const Icon(Icons.wifi_off, color: C.red, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text('${'no_internet'.tr}. ${'ai_needs_net'.tr}', style: const TextStyle(fontSize: 12, color: C.red)),
+                  ),
+                ]),
+              ),
+            ),
           const SizedBox(height: 8),
           Expanded(
             child: ListView(
@@ -180,7 +196,7 @@ class _MessagesAppState extends State<MessagesApp> {
                       padding: const EdgeInsets.only(right: 8),
                       child: ActionChip(
                         label: Text(money(((base * q) / 5).round() * 5)),
-                        onPressed: d.busy ? null : () => _send(d, '${((base * q) / 5).round() * 5}'),
+                        onPressed: canSend ? () => _send(d, '${((base * q) / 5).round() * 5}') : null,
                       ),
                     ),
                 ],
@@ -192,7 +208,7 @@ class _MessagesAppState extends State<MessagesApp> {
                 Expanded(
                   child: TextField(
                     controller: ctrl,
-                    enabled: !d.busy,
+                    enabled: canSend,
                     onSubmitted: (v) => _send(d, v),
                     decoration: InputDecoration(
                       hintText: 'type_offer'.tr,
@@ -205,7 +221,7 @@ class _MessagesAppState extends State<MessagesApp> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.send, color: C.accent),
-                  onPressed: d.busy ? null : () => _send(d, ctrl.text),
+                  onPressed: canSend ? () => _send(d, ctrl.text) : null,
                 ),
               ],
             ),

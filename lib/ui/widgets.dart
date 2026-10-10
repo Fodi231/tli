@@ -66,7 +66,8 @@ class AppPage extends StatelessWidget {
   final String title;
   final Widget child;
   final List<Widget> actions;
-  const AppPage({super.key, required this.title, required this.child, this.actions = const []});
+  final VoidCallback? onBack;
+  const AppPage({super.key, required this.title, required this.child, this.actions = const [], this.onBack});
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +81,7 @@ class AppPage extends StatelessWidget {
               children: [
                 IconButton(
                   icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-                  onPressed: () => context.read<Shell>().close(),
+                  onPressed: onBack ?? () => context.read<Shell>().close(),
                 ),
                 Expanded(
                   child: Text(title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),

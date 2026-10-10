@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -36,6 +38,22 @@ class GameState extends ChangeNotifier {
   List<Txn> txns = [];
   late LatLng player;
 
+  // --- appearance / settings
+  String playerName = '';
+  int wallpaperIndex = 0;
+  String? wallpaperB64;
+  Uint8List? wallpaperBytes;
+  double wallpaperDim = 0;
+  double textScale = 1.0;
+  bool haptics = true, notifOrders = true, notifDeals = true;
+
+  // --- network / AI
+  static const String _builtInKey = String.fromEnvironment('GEMINI_API_KEY');
+  bool online = true;
+  StreamSubscription<List<ConnectivityResult>>? _connSub;
+  String get aiKey => geminiKey.isNotEmpty ? geminiKey : _builtInKey;
+  bool get hasBuiltInKey => _builtInKey.isNotEmpty;
+
   City get city => cities[cityIndex];
   int get unreadCount => notifications.where((n) => !n.read).length;
   int get openDeals => deals.where((d) => d.status == 'open').length;
@@ -58,6 +76,17 @@ class GameState extends ChangeNotifier {
     I18n.lang = lang;
     player = LatLng(city.lat, city.lng);
     _seedWorld();
+    try {
+      final c = Connectivity();
+      online = (await c.checkConnectivity()).any((r) => r != ConnectivityResult.none);
+      _connSub = c.onConnectivityChanged.listen((list) {
+        final v = list.any((r) => r != ConnectivityResult.none);
+        if (v != online) {
+          online = v;
+          notifyListeners();
+        }
+      });
+    } catch (_) {}
     _timer = Timer.periodic(const Duration(seconds: 20), (_) => _tick());
     ready = true;
     notifyListeners();
@@ -66,6 +95,7 @@ class GameState extends ChangeNotifier {
   @override
   void dispose() {
     _timer?.cancel();
+    _connSub?.cancel();
     super.dispose();
   }
 
@@ -100,6 +130,21 @@ class GameState extends ChangeNotifier {
     txns = ((j['txns'] as List?) ?? [])
         .map((e) => Txn.fromJson(Map<String, dynamic>.from(e as Map)))
         .toList();
+    playerName = (j['pname'] as String?) ?? '';
+    wallpaperIndex = (j['wp'] as int?) ?? 0;
+    wallpaperB64 = j['wpimg'] as String?;
+    if (wallpaperB64 != null) {
+      try {
+        wallpaperBytes = base64Decode(wallpaperB64!);
+      } catch (_) {
+        wallpaperB64 = null;
+      }
+    }
+    wallpaperDim = (j['wpdim'] as num? ?? 0).toDouble();
+    textScale = (j['tscale'] as num? ?? 1.0).toDouble();
+    haptics = (j['haptics'] as bool?) ?? true;
+    notifOrders = (j['nord'] as bool?) ?? true;
+    notifDeals = (j['ndeal'] as bool?) ?? true;
   }
 
   void _save() {
@@ -123,6 +168,14 @@ class GameState extends ChangeNotifier {
         'earned': totalEarned,
         'stock': stock.map((e) => e.toJson()).toList(),
         'txns': txns.take(40).map((e) => e.toJson()).toList(),
+        'pname': playerName,
+        'wp': wallpaperIndex,
+        'wpimg': wallpaperB64,
+        'wpdim': wallpaperDim,
+        'tscale': textScale,
+        'haptics': haptics,
+        'nord': notifOrders,
+        'ndeal': notifDeals,
       }),
     );
   }
@@ -162,6 +215,49 @@ class GameState extends ChangeNotifier {
 
   void setKey(String k) {
     geminiKey = k.trim();
+    _changed();
+  }
+
+  void setPlayerName(String n) {
+    playerName = n.trim();
+    _changed();
+  }
+
+  void setWallpaperPreset(int i) {
+    wallpaperIndex = i;
+    wallpaperB64 = null;
+    wallpaperBytes = null;
+    _changed();
+  }
+
+  void setWallpaperImage(Uint8List bytes) {
+    wallpaperBytes = bytes;
+    wallpaperB64 = base64Encode(bytes);
+    _changed();
+  }
+
+  void setWallpaperDim(double v) {
+    wallpaperDim = v;
+    _changed();
+  }
+
+  void setTextScale(double v) {
+    textScale = v;
+    _changed();
+  }
+
+  void setHaptics(bool v) {
+    haptics = v;
+    _changed();
+  }
+
+  void setNotifOrders(bool v) {
+    notifOrders = v;
+    _changed();
+  }
+
+  void setNotifDeals(bool v) {
+    notifDeals = v;
     _changed();
   }
 
@@ -218,7 +314,7 @@ class GameState extends ChangeNotifier {
       lat: c.lat + (_rng.nextDouble() - 0.5) * 0.08,
       lng: c.lng + (_rng.nextDouble() - 0.5) * 0.1,
     ));
-    if (!silent) _note('order', 'n_order', '${s.nameKey.tr} · $dev');
+    if (!silent && notifOrders) _note('order', 'n_order', '${s.nameKey.tr} · $dev');
   }
 
   // -------------------------------------------------------------- orders
@@ -379,7 +475,7 @@ class GameState extends ChangeNotifier {
       }
     }
     if (!silent) {
-      _note('deal', 'n_deal', '$name · ${d.item}');
+      if (notifDeals) _note('deal', 'n_deal', '$name · ${d.item}');
       _changed();
     }
     return d;
@@ -396,7 +492,7 @@ class GameState extends ChangeNotifier {
   /// Local rules decide the outcome; the AI only writes the reply.
   Future<void> sendToDeal(Deal d, String text) async {
     text = text.trim();
-    if (text.isEmpty || d.status != 'open' || d.busy) return;
+    if (text.isEmpty || d.status != 'open' || d.busy || !online) return;
 
     final m = RegExp(r'\d+([.,]\d+)?').firstMatch(text);
     double? offer;
@@ -467,7 +563,7 @@ class GameState extends ChangeNotifier {
         'and never invent a price the GAME RESULT does not give you.';
 
     final reply = await AiService.reply(
-      apiKey: geminiKey,
+      apiKey: aiKey,
       lang: lang,
       persona: persona,
       history: List.of(d.messages),

@@ -5,15 +5,25 @@ import 'package:provider/provider.dart';
 
 import '../../core/catalog.dart';
 import '../../core/game_state.dart';
+import '../../core/geo.dart';
 import '../../core/i18n.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../shell.dart';
 import '../widgets.dart';
 
-/// Real OpenStreetMap. Tap the map to travel there (costs a small fare).
-class MapApp extends StatelessWidget {
+/// Real world map (CARTO dark tiles without text). Country and city names are
+/// drawn by the game itself, so they always use the language chosen in settings.
+/// Tap the map to travel there (costs a small fare).
+class MapApp extends StatefulWidget {
   const MapApp({super.key});
+  @override
+  State<MapApp> createState() => _MapAppState();
+}
+
+class _MapAppState extends State<MapApp> {
+  final MapController controller = MapController();
+  double zoom = 12.5;
 
   void _move(BuildContext context, GameState gs, LatLng p) {
     final km = const Distance().as(LengthUnit.Kilometer, gs.player, p);
@@ -66,6 +76,50 @@ class MapApp extends StatelessWidget {
     );
   }
 
+  Marker _label(GeoLabel g, String lang, {required bool country}) {
+    final text = country ? g.name(lang).toUpperCase() : g.name(lang);
+    return Marker(
+      point: LatLng(g.lat, g.lng),
+      width: 200,
+      height: 22,
+      child: IgnorePointer(
+        child: Center(
+          child: Text(
+            text,
+            maxLines: 1,
+            softWrap: false,
+            overflow: TextOverflow.visible,
+            style: TextStyle(
+              color: country ? const Color(0xFFB8C4E6) : Colors.white,
+              fontSize: country ? 11 : 12,
+              fontWeight: country ? FontWeight.w500 : FontWeight.w700,
+              letterSpacing: country ? 1.4 : 0,
+              shadows: const [
+                Shadow(blurRadius: 3, color: Colors.black),
+                Shadow(blurRadius: 8, color: Colors.black),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<Marker> _labels(String lang) {
+    final out = <Marker>[];
+    if (zoom < 5.5) {
+      for (final g in geoCountries) {
+        out.add(_label(g, lang, country: true));
+      }
+    }
+    if (zoom >= 3.5 && zoom < 12) {
+      for (final g in geoCities) {
+        if (g.rank == 1 || zoom >= 5.5) out.add(_label(g, lang, country: false));
+      }
+    }
+    return out;
+  }
+
   @override
   Widget build(BuildContext context) {
     final gs = context.watch<GameState>();
@@ -99,6 +153,7 @@ class MapApp extends StatelessWidget {
       ),
     ];
 
+    const subdomains = ['a', 'b', 'c', 'd'];
     return AppPage(
       title: 'map'.tr,
       child: Stack(
@@ -106,20 +161,46 @@ class MapApp extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(18),
             child: FlutterMap(
-              key: ValueKey('map_${gs.cityIndex}'),
+              mapController: controller,
               options: MapOptions(
                 initialCenter: LatLng(c.lat, c.lng),
                 initialZoom: 12.5,
+                minZoom: 2,
+                maxZoom: 18,
+                interactionOptions: InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
+                cameraConstraint: CameraConstraint.contain(
+                  bounds: LatLngBounds(const LatLng(-85, -180), const LatLng(85, 180)),
+                ),
                 onTap: (tp, p) => _move(context, gs, p),
+                onPositionChanged: (camera, hasGesture) {
+                  final z = camera.zoom;
+                  if ((z * 2).floor() != (zoom * 2).floor()) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) setState(() => zoom = z);
+                    });
+                  }
+                },
               ),
               children: [
                 TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png',
+                  subdomains: subdomains,
                   userAgentPackageName: 'com.techlife.game',
                 ),
+                // Street names only at close zoom (in the local language of the place).
+                TileLayer(
+                  urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png',
+                  subdomains: subdomains,
+                  userAgentPackageName: 'com.techlife.game',
+                  minZoom: 12,
+                ),
+                MarkerLayer(markers: _labels(gs.lang)),
                 MarkerLayer(markers: markers),
                 const RichAttributionWidget(
-                  attributions: [TextSourceAttribution('© OpenStreetMap contributors')],
+                  attributions: [
+                    TextSourceAttribution('© OpenStreetMap contributors'),
+                    TextSourceAttribution('© CARTO'),
+                  ],
                 ),
               ],
             ),
@@ -141,12 +222,24 @@ class MapApp extends StatelessWidget {
                         onSelected: (_) {
                           if (i == gs.cityIndex) return;
                           final ok = context.read<GameState>().flyTo(i);
+                          if (ok) controller.move(LatLng(cities[i].lat, cities[i].lng), 12.5);
                           toast(context, ok ? '${'flew'.tr} ${cities[i].name(gs.lang)}' : 'no_money'.tr);
                         },
                       ),
                     ),
                 ],
               ),
+            ),
+          ),
+          Positioned(
+            right: 10,
+            bottom: 28,
+            child: FloatingActionButton.small(
+              heroTag: 'recenter',
+              tooltip: 'recenter'.tr,
+              backgroundColor: C.card2,
+              onPressed: () => controller.move(gs.player, 12.5),
+              child: const Icon(Icons.my_location, color: Colors.white),
             ),
           ),
         ],

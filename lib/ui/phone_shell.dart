@@ -20,6 +20,7 @@ import 'apps/shop_app.dart';
 import 'apps/stats_app.dart';
 import 'apps/storage_app.dart';
 import 'shell.dart';
+import 'wallpaper.dart';
 import 'widgets.dart';
 
 /// Shows the phone full-screen on mobile, or inside a phone frame on wide screens.
@@ -106,16 +107,8 @@ class Aurora extends StatelessWidget {
   const Aurora({super.key});
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF050B1E), Color(0xFF0B3B4A), Color(0xFF0A1530), Color(0xFF070C1A)],
-          stops: [0, 0.35, 0.7, 1],
-        ),
-      ),
-    );
+    final gs = context.watch<GameState>();
+    return WallpaperView(index: gs.wallpaperIndex, bytes: gs.wallpaperBytes, dim: gs.wallpaperDim);
   }
 }
 
@@ -181,7 +174,7 @@ class StatusBar extends StatelessWidget {
               ),
             ),
           const SizedBox(width: 10),
-          const Icon(Icons.wifi, size: 16),
+          Icon(gs.online ? Icons.wifi : Icons.wifi_off, size: 16, color: gs.online ? null : C.red),
           const SizedBox(width: 6),
           const Icon(Icons.battery_full, size: 18),
         ],

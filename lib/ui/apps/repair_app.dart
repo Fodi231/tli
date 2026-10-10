@@ -160,14 +160,14 @@ class _RepairAppState extends State<RepairApp> {
           : () {
               if (n == next + 1) {
                 setState(() => next++);
-                HapticFeedback.lightImpact();
+                if (gs.haptics) HapticFeedback.lightImpact();
                 if (next == 6) {
                   final r = context.read<GameState>().completeRepair(order, mistakes);
                   setState(() => reward = r);
                 }
               } else {
                 setState(() => mistakes++);
-                HapticFeedback.heavyImpact();
+                if (gs.haptics) HapticFeedback.heavyImpact();
               }
             },
       child: Row(

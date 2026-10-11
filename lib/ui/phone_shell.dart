@@ -66,8 +66,9 @@ class PhoneScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    context.watch<GameState>();
+    final gs = context.watch<GameState>();
     final sh = context.watch<Shell>();
+    final light = isLightMode(gs.themeMode, MediaQuery.platformBrightnessOf(context));
     Widget body;
     String key;
     if (!sh.unlocked) {
@@ -77,38 +78,46 @@ class PhoneScreen extends StatelessWidget {
       body = const HomeScreen();
       key = 'home';
     } else {
-      body = AppHost(id: sh.app!, arg: sh.arg);
-      key = 'app_${sh.app}_${sh.arg}';
+      // Apps are drawn dark; the light theme inverts them (the wallpaper,
+      // lock screen and home screen are not affected).
+      body = ThemeFilter(light: light, child: AppHost(id: sh.app!, arg: sh.arg));
+      key = 'app_${sh.app}_${sh.arg}_$light';
     }
-    return Stack(
-      children: [
-        const Positioned.fill(child: Aurora()),
-        Column(
-          children: [
-            const StatusBar(),
-            Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 280),
-                transitionBuilder: (child, anim) => FadeTransition(
-                  opacity: anim,
-                  child: ScaleTransition(scale: Tween(begin: 0.92, end: 1.0).animate(anim), child: child),
+    return LayoutBuilder(builder: (context, c) {
+      Shell.phoneSize = Size(c.maxWidth, c.maxHeight);
+      return Stack(
+        children: [
+          Positioned.fill(child: Aurora(lock: !sh.unlocked)),
+          Column(
+            children: [
+              const StatusBar(),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 280),
+                  transitionBuilder: (child, anim) => FadeTransition(
+                    opacity: anim,
+                    child: ScaleTransition(scale: Tween(begin: 0.92, end: 1.0).animate(anim), child: child),
+                  ),
+                  child: KeyedSubtree(key: ValueKey(key), child: body),
                 ),
-                child: KeyedSubtree(key: ValueKey(key), child: body),
               ),
-            ),
-          ],
-        ),
-      ],
-    );
+            ],
+          ),
+        ],
+      );
+    });
   }
 }
 
+/// Wallpaper layer. The lock screen uses its own wallpaper only when the
+/// "separate lock screen wallpaper" option is on, otherwise it matches home.
 class Aurora extends StatelessWidget {
-  const Aurora({super.key});
+  final bool lock;
+  const Aurora({super.key, this.lock = false});
   @override
   Widget build(BuildContext context) {
     final gs = context.watch<GameState>();
-    return WallpaperView(index: gs.wallpaperIndex, bytes: gs.wallpaperBytes, dim: gs.wallpaperDim);
+    return WallpaperView(cfg: lock ? gs.lockCfg : gs.homeWp, dim: gs.wallpaperDim);
   }
 }
 

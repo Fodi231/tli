@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/app_log.dart';
 import '../../core/catalog.dart';
 import '../../core/game_state.dart';
 import '../../core/geo.dart';
@@ -24,6 +25,14 @@ class MapApp extends StatefulWidget {
 class _MapAppState extends State<MapApp> {
   final MapController controller = MapController();
   double zoom = 12.5;
+  DateTime _lastTileLog = DateTime.fromMillisecondsSinceEpoch(0);
+
+  void _tileError(Object error) {
+    final now = DateTime.now();
+    if (now.difference(_lastTileLog).inSeconds < 20) return; // do not flood the log
+    _lastTileLog = now;
+    AppLog.I.warn('map', 'плитка карты не загрузилась: ${error.toString().split('\n').first}');
+  }
 
   void _move(BuildContext context, GameState gs, LatLng p) {
     final km = const Distance().as(LengthUnit.Kilometer, gs.player, p);
@@ -153,7 +162,6 @@ class _MapAppState extends State<MapApp> {
       ),
     ];
 
-    const subdomains = ['a', 'b', 'c', 'd'];
     return AppPage(
       title: 'map'.tr,
       child: Stack(
@@ -182,24 +190,24 @@ class _MapAppState extends State<MapApp> {
                 },
               ),
               children: [
+                // Esri "Dark Gray Canvas" base map: free, needs no API key and
+                // has NO text, so country/city names come from the game and
+                // follow the chosen language. In the light theme the whole app
+                // is colour-inverted, which turns this into a light map.
+                // If a tile cannot be loaded, plain OpenStreetMap is used instead.
                 TileLayer(
-                  urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png',
-                  subdomains: subdomains,
-                  userAgentPackageName: 'com.techlife.game',
-                ),
-                // Street names only at close zoom (in the local language of the place).
-                TileLayer(
-                  urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png',
-                  subdomains: subdomains,
-                  userAgentPackageName: 'com.techlife.game',
-                  minZoom: 12,
+                  urlTemplate: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+                  fallbackUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  maxNativeZoom: 16,
+                  userAgentPackageName: 'com.techlife.techlife',
+                  errorTileCallback: (tile, error, stackTrace) => _tileError(error),
                 ),
                 MarkerLayer(markers: _labels(gs.lang)),
                 MarkerLayer(markers: markers),
                 const RichAttributionWidget(
                   attributions: [
                     TextSourceAttribution('© OpenStreetMap contributors'),
-                    TextSourceAttribution('© CARTO'),
+                    TextSourceAttribution('Esri, HERE, Garmin'),
                   ],
                 ),
               ],

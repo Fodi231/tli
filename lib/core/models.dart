@@ -64,7 +64,8 @@ class StockItem {
 class ChatMsg {
   final bool mine;
   final String text;
-  ChatMsg(this.mine, this.text);
+  final bool fallback; // reply was generated offline because the AI failed
+  ChatMsg(this.mine, this.text, {this.fallback = false});
 }
 
 class Deal {

@@ -9,9 +9,11 @@ import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'ai_service.dart';
+import 'app_log.dart';
 import 'catalog.dart';
 import 'i18n.dart';
 import 'models.dart';
+import 'wallpaper_cfg.dart';
 
 class GameState extends ChangeNotifier {
   final Random _rng = Random();
@@ -40,19 +42,27 @@ class GameState extends ChangeNotifier {
 
   // --- appearance / settings
   String playerName = '';
-  int wallpaperIndex = 0;
-  String? wallpaperB64;
-  Uint8List? wallpaperBytes;
+  int themeMode = 2; // 0 = system, 1 = light, 2 = dark
+  final WallpaperCfg homeWp = WallpaperCfg();
+  final WallpaperCfg lockWp = WallpaperCfg();
+  bool lockSeparate = false;
   double wallpaperDim = 0;
   double textScale = 1.0;
   bool haptics = true, notifOrders = true, notifDeals = true;
 
   // --- network / AI
   static const String _builtInKey = String.fromEnvironment('GEMINI_API_KEY');
-  bool online = true;
+  bool _netOnline = true;
+  bool forceOffline = false; // admin: simulate "no internet"
+  String aiModel = '';
+  String? lastAiError;
+  int lastAiMs = 0;
   StreamSubscription<List<ConnectivityResult>>? _connSub;
+
+  bool get online => _netOnline && !forceOffline;
   String get aiKey => geminiKey.isNotEmpty ? geminiKey : _builtInKey;
   bool get hasBuiltInKey => _builtInKey.isNotEmpty;
+  WallpaperCfg get lockCfg => lockSeparate ? lockWp : homeWp;
 
   City get city => cities[cityIndex];
   int get unreadCount => notifications.where((n) => !n.read).length;
@@ -67,26 +77,36 @@ class GameState extends ChangeNotifier {
   // ---------------------------------------------------------------- init
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
+    await AppLog.I.init(_prefs!);
     final raw = _prefs!.getString('save');
     if (raw != null) {
       try {
         _load(jsonDecode(raw) as Map<String, dynamic>);
-      } catch (_) {}
+      } catch (e) {
+        AppLog.I.error('game', 'не удалось прочитать сохранение: $e');
+      }
     }
+    _loadImage('wp_home_img', homeWp);
+    _loadImage('wp_lock_img', lockWp);
     I18n.lang = lang;
+    AiService.modelOverride = aiModel.isEmpty ? null : aiModel;
     player = LatLng(city.lat, city.lng);
     _seedWorld();
     try {
       final c = Connectivity();
-      online = (await c.checkConnectivity()).any((r) => r != ConnectivityResult.none);
+      _netOnline = (await c.checkConnectivity()).any((r) => r != ConnectivityResult.none);
+      AppLog.I.info('net', _netOnline ? 'онлайн' : 'нет сети');
       _connSub = c.onConnectivityChanged.listen((list) {
         final v = list.any((r) => r != ConnectivityResult.none);
-        if (v != online) {
-          online = v;
+        if (v != _netOnline) {
+          _netOnline = v;
+          AppLog.I.info('net', v ? 'сеть появилась' : 'сеть пропала');
           notifyListeners();
         }
       });
-    } catch (_) {}
+    } catch (e) {
+      AppLog.I.warn('net', 'проверка сети недоступна: $e');
+    }
     _timer = Timer.periodic(const Duration(seconds: 20), (_) => _tick());
     ready = true;
     notifyListeners();
@@ -106,6 +126,27 @@ class GameState extends ChangeNotifier {
     if (deals.isEmpty) {
       spawnDeal('buy', silent: true);
       spawnDeal('buy', silent: true);
+    }
+  }
+
+  void _loadImage(String key, WallpaperCfg cfg) {
+    final s = _prefs?.getString(key);
+    if (s == null) return;
+    try {
+      cfg.bytes = base64Decode(s);
+    } catch (_) {
+      cfg.bytes = null;
+    }
+  }
+
+  void _saveImage(WallpaperCfg cfg) {
+    final p = _prefs;
+    if (p == null) return;
+    final key = identical(cfg, lockWp) ? 'wp_lock_img' : 'wp_home_img';
+    if (cfg.bytes == null) {
+      p.remove(key);
+    } else {
+      p.setString(key, base64Encode(cfg.bytes!));
     }
   }
 
@@ -131,28 +172,19 @@ class GameState extends ChangeNotifier {
         .map((e) => Txn.fromJson(Map<String, dynamic>.from(e as Map)))
         .toList();
     playerName = (j['pname'] as String?) ?? '';
-    wallpaperIndex = (j['wp'] as int?) ?? 0;
-    wallpaperB64 = j['wpimg'] as String?;
-    if (wallpaperB64 != null) {
-      try {
-        wallpaperBytes = base64Decode(wallpaperB64!);
-      } catch (_) {
-        wallpaperB64 = null;
-      }
-    }
+    themeMode = ((j['theme'] as int?) ?? 2).clamp(0, 2).toInt();
+    homeWp.loadJson(j['wpHome'] == null ? null : Map<String, dynamic>.from(j['wpHome'] as Map));
+    lockWp.loadJson(j['wpLock'] == null ? null : Map<String, dynamic>.from(j['wpLock'] as Map));
+    lockSeparate = (j['lockSep'] as bool?) ?? false;
     wallpaperDim = (j['wpdim'] as num? ?? 0).toDouble();
     textScale = (j['tscale'] as num? ?? 1.0).toDouble();
     haptics = (j['haptics'] as bool?) ?? true;
     notifOrders = (j['nord'] as bool?) ?? true;
     notifDeals = (j['ndeal'] as bool?) ?? true;
+    aiModel = (j['aiModel'] as String?) ?? '';
   }
 
-  void _save() {
-    final p = _prefs;
-    if (p == null) return;
-    p.setString(
-      'save',
-      jsonEncode({
+  Map<String, dynamic> _toJson() => {
         'balance': balance,
         'rep': reputation,
         'city': cityIndex,
@@ -169,15 +201,22 @@ class GameState extends ChangeNotifier {
         'stock': stock.map((e) => e.toJson()).toList(),
         'txns': txns.take(40).map((e) => e.toJson()).toList(),
         'pname': playerName,
-        'wp': wallpaperIndex,
-        'wpimg': wallpaperB64,
+        'theme': themeMode,
+        'wpHome': homeWp.toJson(),
+        'wpLock': lockWp.toJson(),
+        'lockSep': lockSeparate,
         'wpdim': wallpaperDim,
         'tscale': textScale,
         'haptics': haptics,
         'nord': notifOrders,
         'ndeal': notifDeals,
-      }),
-    );
+        'aiModel': aiModel,
+      };
+
+  void _save() {
+    final p = _prefs;
+    if (p == null) return;
+    p.setString('save', jsonEncode(_toJson()));
   }
 
   void _changed() {
@@ -203,6 +242,7 @@ class GameState extends ChangeNotifier {
     txns = [];
     player = LatLng(city.lat, city.lng);
     _seedWorld();
+    AppLog.I.info('game', 'прогресс сброшен');
     _changed();
   }
 
@@ -223,16 +263,55 @@ class GameState extends ChangeNotifier {
     _changed();
   }
 
-  void setWallpaperPreset(int i) {
-    wallpaperIndex = i;
-    wallpaperB64 = null;
-    wallpaperBytes = null;
+  void setThemeMode(int m) {
+    themeMode = m;
     _changed();
   }
 
-  void setWallpaperImage(Uint8List bytes) {
-    wallpaperBytes = bytes;
-    wallpaperB64 = base64Encode(bytes);
+  /// Called when the device switches between light and dark ("system" theme).
+  void refreshTheme() => notifyListeners();
+
+  WallpaperCfg _cfg(bool lock) => (lock && lockSeparate) ? lockWp : homeWp;
+
+  void setWallpaperPreset(int i, {bool lock = false}) {
+    final c = _cfg(lock);
+    c.preset = i;
+    c.bytes = null;
+    c.iw = 0;
+    c.ih = 0;
+    c.scale = 1;
+    c.ox = 0;
+    c.oy = 0;
+    _saveImage(c);
+    _changed();
+  }
+
+  void setWallpaperImage(Uint8List bytes, int iw, int ih, double scale, double ox, double oy, {bool lock = false}) {
+    final c = _cfg(lock);
+    c.bytes = bytes;
+    c.iw = iw;
+    c.ih = ih;
+    c.scale = scale;
+    c.ox = ox;
+    c.oy = oy;
+    _saveImage(c);
+    _changed();
+  }
+
+  void setWallpaperTransform(double scale, double ox, double oy, {bool lock = false}) {
+    final c = _cfg(lock);
+    c.scale = scale;
+    c.ox = ox;
+    c.oy = oy;
+    _changed();
+  }
+
+  void setLockSeparate(bool v) {
+    lockSeparate = v;
+    if (v) {
+      lockWp.copyFrom(homeWp); // start from the same picture
+      _saveImage(lockWp);
+    }
     _changed();
   }
 
@@ -344,6 +423,7 @@ class GameState extends ChangeNotifier {
     reputation = (reputation + delta).clamp(1.0, 5.0).toDouble();
     _income(s.nameKey.tr, reward);
     _note('money', 'n_pay', '+\$${reward.toInt()}');
+    AppLog.I.info('game', 'ремонт ${o.service} завершён, ошибок: $mistakes, награда: \$${reward.toInt()}');
     _changed();
     return reward;
   }
@@ -369,10 +449,10 @@ class GameState extends ChangeNotifier {
     return fare;
   }
 
-  bool flyTo(int i) {
+  bool flyTo(int i, {bool free = false}) {
     if (i == cityIndex) return true;
-    if (balance < 150) return false;
-    _spend('fly'.tr, 150);
+    if (!free && balance < 150) return false;
+    if (!free) _spend('fly'.tr, 150);
     cityIndex = i;
     player = LatLng(city.lat, city.lng);
     orders.removeWhere((o) => o.status == 'available');
@@ -562,7 +642,7 @@ class GameState extends ChangeNotifier {
         'reply only in ${AiService.langName(lang)}. Never reveal your hidden limit price '
         'and never invent a price the GAME RESULT does not give you.';
 
-    final reply = await AiService.reply(
+    final r = await AiService.reply(
       apiKey: aiKey,
       lang: lang,
       persona: persona,
@@ -571,8 +651,10 @@ class GameState extends ChangeNotifier {
       offlineKey: offlineKey,
       number: number,
     );
+    lastAiError = r.error;
+    lastAiMs = r.ms;
 
-    d.messages.add(ChatMsg(false, reply));
+    d.messages.add(ChatMsg(false, r.text, fallback: !r.ok));
     d.busy = false;
 
     if (outcome == 'accept' && number != null) {
@@ -587,9 +669,105 @@ class GameState extends ChangeNotifier {
         _note('money', 'n_pay', '+\$${number.toInt()}');
       }
       reputation = (reputation + 0.02).clamp(1.0, 5.0).toDouble();
+      AppLog.I.info('game', 'сделка (${d.kind}) ${d.item} за \$${number.toInt()}');
     } else if (outcome == 'leave') {
       d.status = 'lost';
     }
     _changed();
+  }
+
+  // --------------------------------------------------------------- admin
+  void adminAddMoney(double v) {
+    balance += v;
+    txns.insert(0, Txn('admin', v));
+    AppLog.I.info('admin', 'баланс ${v >= 0 ? '+' : ''}${v.toInt()}');
+    _changed();
+  }
+
+  void adminSetBalance(double v) {
+    balance = v;
+    AppLog.I.info('admin', 'баланс установлен: ${v.toInt()}');
+    _changed();
+  }
+
+  void adminSetReputation(double v) {
+    reputation = v.clamp(1.0, 5.0).toDouble();
+    _changed();
+  }
+
+  void adminSpawnOrders(int n) {
+    for (var i = 0; i < n; i++) {
+      _spawnOrder(silent: true);
+    }
+    AppLog.I.info('admin', 'создано заказов: $n');
+    _changed();
+  }
+
+  void adminSpawnDeal() {
+    spawnDeal('buy');
+    AppLog.I.info('admin', 'создана сделка');
+  }
+
+  void adminGiveParts(int n) {
+    for (final c in categories) {
+      parts[c] = (parts[c] ?? 0) + n;
+    }
+    AppLog.I.info('admin', 'выдано запчастей: по $n');
+    _changed();
+  }
+
+  void adminUnlockCourses() {
+    for (final c in courses) {
+      courseProgress[c.id] = 1;
+    }
+    AppLog.I.info('admin', 'все курсы пройдены');
+    _changed();
+  }
+
+  void adminClearDebts() {
+    loan = 0;
+    taxDue = 0;
+    AppLog.I.info('admin', 'долги и налоги обнулены');
+    _changed();
+  }
+
+  void adminTick() => _tick();
+
+  void setForceOffline(bool v) {
+    forceOffline = v;
+    AppLog.I.info('net', v ? 'админ: имитация «нет интернета» включена' : 'админ: имитация «нет интернета» выключена');
+    notifyListeners();
+  }
+
+  void setAiModel(String m) {
+    aiModel = m.trim();
+    AiService.modelOverride = aiModel.isEmpty ? null : aiModel;
+    AppLog.I.info('admin', 'модель ИИ: ${aiModel.isEmpty ? 'по умолчанию' : aiModel}');
+    _changed();
+  }
+
+  Future<AiResult> adminTestAi() async {
+    AppLog.I.info('ai', 'тест соединения с ИИ…');
+    final r = await AiService.ping(aiKey);
+    lastAiError = r.error;
+    lastAiMs = r.ms;
+    notifyListeners();
+    return r;
+  }
+
+  String exportSave() => const JsonEncoder.withIndent('  ').convert(_toJson());
+
+  bool importSave(String text) {
+    try {
+      _load(jsonDecode(text) as Map<String, dynamic>);
+      I18n.lang = lang;
+      player = LatLng(city.lat, city.lng);
+      AppLog.I.info('admin', 'сохранение импортировано');
+      _changed();
+      return true;
+    } catch (e) {
+      AppLog.I.error('admin', 'ошибка импорта сохранения: $e');
+      return false;
+    }
   }
 }

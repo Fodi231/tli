@@ -192,6 +192,22 @@ class I18n {
     'wp_midnight': ['Полночь', 'Midnight', 'Північ'],
     'photo_failed': ['Не удалось загрузить фото', 'Could not load the photo', 'Не вдалося завантажити фото'],
     'recenter': ['Моё положение', 'My position', 'Моя позиція'],
+    'theme': ['Тема', 'Theme', 'Тема'],
+    'theme_system': ['Как в системе', 'System', 'Як у системі'],
+    'theme_light': ['Светлая', 'Light', 'Світла'],
+    'theme_dark': ['Тёмная', 'Dark', 'Темна'],
+    'wp_lock_sep': ['Отдельные обои для экрана блокировки', 'Separate lock screen wallpaper', 'Окремі шпалери для екрана блокування'],
+    'wp_home': ['Главный экран', 'Home screen', 'Головний екран'],
+    'wp_lock': ['Экран блокировки', 'Lock screen', 'Екран блокування'],
+    'wp_adjust': ['Настроить область', 'Adjust crop', 'Налаштувати ділянку'],
+    'wp_crop': ['Область обоев', 'Wallpaper crop', 'Ділянка шпалер'],
+    'wp_apply': ['Применить', 'Apply', 'Застосувати'],
+    'wp_reset': ['Сбросить', 'Reset', 'Скинути'],
+    'wp_drag_hint': ['Двигайте фото пальцем, масштаб — двумя пальцами или ползунком', 'Drag the photo; pinch or use the slider to zoom', 'Рухайте фото пальцем, масштаб — двома пальцями або повзунком'],
+    'admin_panel': ['Админ-панель', 'Admin panel', 'Адмін-панель'],
+    'key_type': ['Тип ключа', 'Key type', 'Тип ключа'],
+    'ai_failed': ['ИИ не ответил — использован офлайн-ответ', 'The AI did not answer — an offline reply was used', 'ШІ не відповів — використано офлайн-відповідь'],
+    'ai_offline_reply': ['офлайн-ответ', 'offline reply', 'офлайн-відповідь'],
   };
 }
 

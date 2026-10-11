@@ -48,7 +48,12 @@ class _MessagesAppState extends State<MessagesApp> {
   void _send(Deal d, String text) {
     if (text.trim().isEmpty) return;
     ctrl.clear();
-    context.read<GameState>().sendToDeal(d, text);
+    context.read<GameState>().sendToDeal(d, text).then((_) {
+      // The AI failed and an offline phrase was used instead: tell the player.
+      if (mounted && d.messages.isNotEmpty && d.messages.last.fallback) {
+        toast(context, 'ai_failed'.tr);
+      }
+    });
   }
 
   @override
@@ -171,7 +176,24 @@ class _MessagesAppState extends State<MessagesApp> {
                         color: m.mine ? C.accent : C.card2,
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Text(m.text),
+                      child: m.fallback
+                          ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(m.text),
+                                const SizedBox(height: 4),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.cloud_off, size: 12, color: C.orange),
+                                    const SizedBox(width: 4),
+                                    Text('ai_offline_reply'.tr, style: const TextStyle(fontSize: 10, color: C.orange)),
+                                  ],
+                                ),
+                              ],
+                            )
+                          : Text(m.text),
                     ),
                   ),
                 if (d.busy)

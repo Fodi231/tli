@@ -67,7 +67,11 @@ class AppPage extends StatelessWidget {
   final Widget child;
   final List<Widget> actions;
   final VoidCallback? onBack;
-  const AppPage({super.key, required this.title, required this.child, this.actions = const [], this.onBack});
+
+  /// true = use the whole width on tablets / PC (map, messages); otherwise the
+  /// content is centred in a readable column.
+  final bool wide;
+  const AppPage({super.key, required this.title, required this.child, this.actions = const [], this.onBack, this.wide = false});
 
   @override
   Widget build(BuildContext context) {
@@ -93,7 +97,12 @@ class AppPage extends StatelessWidget {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-              child: child,
+              child: wide
+                  ? child
+                  : Align(
+                      alignment: Alignment.topCenter,
+                      child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 900), child: child),
+                    ),
             ),
           ),
         ],

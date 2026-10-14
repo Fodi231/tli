@@ -23,17 +23,24 @@ import 'shell.dart';
 import 'wallpaper.dart';
 import 'widgets.dart';
 
-/// Shows the phone full-screen on mobile, or inside a phone frame on wide screens.
+/// Layout modes (Settings -> Display): automatic, phone or tablet / PC.
+/// Tablet / PC fills the whole window; "phone" on a wide screen shows a
+/// phone-shaped frame in the middle.
+bool useTabletLayout(GameState gs, double width) =>
+    gs.layoutMode == 2 || (gs.layoutMode == 0 && width >= 700);
+
 class PhoneShell extends StatelessWidget {
   const PhoneShell({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final gs = context.watch<GameState>();
     return LayoutBuilder(builder: (context, c) {
-      final wide = c.maxWidth > 600;
+      final tablet = useTabletLayout(gs, c.maxWidth);
+      final framed = !tablet && c.maxWidth > 600;
       return Scaffold(
-        backgroundColor: wide ? const Color(0xFF05070D) : C.bg,
-        body: wide
+        backgroundColor: framed ? const Color(0xFF05070D) : C.bg,
+        body: framed
             ? Center(
                 child: Padding(
                   padding: const EdgeInsets.all(12),
@@ -211,18 +218,21 @@ class LockScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Column(
           children: [
-            const SizedBox(height: 40),
+            SizedBox(height: MediaQuery.sizeOf(context).width >= 700 ? 80 : 40),
             const ClockText(style: TextStyle(fontSize: 76, fontWeight: FontWeight.w300)),
             Text(date, style: const TextStyle(fontSize: 18, color: C.sub)),
             const SizedBox(height: 28),
-            Panel(
-              child: Row(
-                children: [
-                  const Icon(Icons.cloud, size: 36, color: C.sub),
-                  const SizedBox(width: 12),
-                  Expanded(child: Text(gs.city.name(gs.lang), style: const TextStyle(fontSize: 16))),
-                  Text(gs.city.temp, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600)),
-                ],
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 440),
+              child: Panel(
+                child: Row(
+                  children: [
+                    const Icon(Icons.cloud, size: 36, color: C.sub),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(gs.city.name(gs.lang), style: const TextStyle(fontSize: 16))),
+                    Text(gs.city.temp, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600)),
+                  ],
+                ),
               ),
             ),
             const Spacer(),
@@ -277,9 +287,12 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gs = context.watch<GameState>();
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      child: Column(
+    return LayoutBuilder(builder: (context, box) {
+      final w = box.maxWidth;
+      final wide = w >= 700;
+      // 4 columns on a phone, more on a tablet / PC window.
+      final cols = wide ? (w / 150).floor().clamp(5, 8).toInt() : 4;
+      final content = Column(
         children: [
           Row(
             children: [
@@ -319,8 +332,8 @@ class HomeScreen extends StatelessWidget {
           const SizedBox(height: 14),
           Expanded(
             child: GridView.count(
-              crossAxisCount: 4,
-              childAspectRatio: 0.78,
+              crossAxisCount: cols,
+              childAspectRatio: wide ? 1.0 : 0.78,
               physics: const BouncingScrollPhysics(),
               children: [for (final a in homeApps) AppIcon(a)],
             ),
@@ -335,8 +348,15 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
+      );
+      return Padding(
+        padding: EdgeInsets.symmetric(horizontal: wide ? 24 : 14),
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 1100), child: content),
+        ),
+      );
+    });
   }
 }
 

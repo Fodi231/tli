@@ -139,3 +139,10 @@ lib/
   ui/     phone_shell.dart (экран блокировки, главный экран) · shell.dart · widgets.dart
   ui/apps/  orders · repair · shop · storage · messages · map · bank · learning · stats · achievements · notifications · settings
 ```
+
+## Версия 0.3.0
+
+- ИИ: пробуются оба сервера Google (Gemini API и Vertex), запоминается рабочий; в админ-панели можно подключить свой OpenAI-совместимый сервис (Groq, OpenRouter и др.). Ошибка 403 «API not enabled» лечится включением Vertex AI API по ссылке из лога либо ключом `AIza…` из aistudio.google.com/apikey.
+- ПК/планшет: игра занимает всё окно, настройки «Экран» (режим, масштаб интерфейса, размер окна, полный экран, F11).
+- Карта: офлайн-контуры стран, 7 342 города и 242 страны на языке игры без наложения подписей, тап по городу — перелёт, цепочка источников плиток, ограничение числа запросов.
+- Windows: имя TechLife, своя иконка.

@@ -38,6 +38,11 @@ class AppLog extends ChangeNotifier {
   void add(String level, String source, String message) {
     var m = message;
     if (m.length > 600) m = '${m.substring(0, 600)}…';
+    // identical repeated messages (e.g. a map tile error storm) are not stored twice
+    if (entries.isNotEmpty) {
+      final f = entries.first;
+      if (f.level == level && f.source == source && f.message == m && DateTime.now().difference(f.time).inSeconds < 30) return;
+    }
     entries.insert(0, LogEntry(level, source, m));
     if (entries.length > 300) entries.removeRange(300, entries.length);
     debugPrint('[$level/$source] $m');

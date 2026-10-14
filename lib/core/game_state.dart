@@ -14,6 +14,7 @@ import 'catalog.dart';
 import 'i18n.dart';
 import 'models.dart';
 import 'wallpaper_cfg.dart';
+import 'window_service.dart';
 
 class GameState extends ChangeNotifier {
   final Random _rng = Random();
@@ -50,11 +51,22 @@ class GameState extends ChangeNotifier {
   double textScale = 1.0;
   bool haptics = true, notifOrders = true, notifDeals = true;
 
+  // --- display (PC / tablet)
+  int layoutMode = 0; // 0 = automatic, 1 = phone, 2 = tablet / PC
+  int uiScalePct = 100; // 70..160
+  bool fullscreen = false;
+  int winW = 1280, winH = 800;
+
+  // --- map
+  int mapStyle = 0; // 0 auto, 1 streets, 2 satellite, 3 offline only
+  City? customCity; // a city picked on the world map (instead of the 3 presets)
+
   // --- network / AI
   static const String _builtInKey = String.fromEnvironment('GEMINI_API_KEY');
   bool _netOnline = true;
   bool forceOffline = false; // admin: simulate "no internet"
   String aiModel = '';
+  String aiCustomUrl = '', aiCustomKey = '', aiCustomModel = '';
   String? lastAiError;
   int lastAiMs = 0;
   StreamSubscription<List<ConnectivityResult>>? _connSub;
@@ -64,7 +76,7 @@ class GameState extends ChangeNotifier {
   bool get hasBuiltInKey => _builtInKey.isNotEmpty;
   WallpaperCfg get lockCfg => lockSeparate ? lockWp : homeWp;
 
-  City get city => cities[cityIndex];
+  City get city => customCity ?? cities[cityIndex];
   int get unreadCount => notifications.where((n) => !n.read).length;
   int get openDeals => deals.where((d) => d.status == 'open').length;
   int get certCount => courseProgress.values.where((v) => v >= 1).length;
@@ -89,7 +101,7 @@ class GameState extends ChangeNotifier {
     _loadImage('wp_home_img', homeWp);
     _loadImage('wp_lock_img', lockWp);
     I18n.lang = lang;
-    AiService.modelOverride = aiModel.isEmpty ? null : aiModel;
+    _applyAi();
     player = LatLng(city.lat, city.lng);
     _seedWorld();
     try {
@@ -182,6 +194,31 @@ class GameState extends ChangeNotifier {
     notifOrders = (j['nord'] as bool?) ?? true;
     notifDeals = (j['ndeal'] as bool?) ?? true;
     aiModel = (j['aiModel'] as String?) ?? '';
+    aiCustomUrl = (j['aiUrl'] as String?) ?? '';
+    aiCustomKey = (j['aiCKey'] as String?) ?? '';
+    aiCustomModel = (j['aiCModel'] as String?) ?? '';
+    layoutMode = ((j['layout'] as int?) ?? 0).clamp(0, 2).toInt();
+    uiScalePct = ((j['uiScale'] as int?) ?? 100).clamp(70, 160).toInt();
+    fullscreen = (j['fullscreen'] as bool?) ?? false;
+    winW = ((j['winW'] as int?) ?? 1280).clamp(480, 7680).toInt();
+    winH = ((j['winH'] as int?) ?? 800).clamp(640, 4320).toInt();
+    mapStyle = ((j['mapStyle'] as int?) ?? 0).clamp(0, 3).toInt();
+    final cc = j['cCity'];
+    customCity = null;
+    if (cc is Map) {
+      try {
+        customCity = City(
+          (cc['id'] ?? 'custom').toString(),
+          [for (final n in (cc['n'] as List)) n.toString()],
+          (cc['lat'] as num).toDouble(),
+          (cc['lng'] as num).toDouble(),
+          (cc['t'] ?? '—').toString(),
+        );
+        if (customCity!.names.length < 3) customCity = null;
+      } catch (_) {
+        customCity = null;
+      }
+    }
   }
 
   Map<String, dynamic> _toJson() => {
@@ -211,6 +248,24 @@ class GameState extends ChangeNotifier {
         'nord': notifOrders,
         'ndeal': notifDeals,
         'aiModel': aiModel,
+        'aiUrl': aiCustomUrl,
+        'aiCKey': aiCustomKey,
+        'aiCModel': aiCustomModel,
+        'layout': layoutMode,
+        'uiScale': uiScalePct,
+        'fullscreen': fullscreen,
+        'winW': winW,
+        'winH': winH,
+        'mapStyle': mapStyle,
+        'cCity': customCity == null
+            ? null
+            : {
+                'id': customCity!.id,
+                'n': customCity!.names,
+                'lat': customCity!.lat,
+                'lng': customCity!.lng,
+                't': customCity!.temp,
+              },
       };
 
   void _save() {
@@ -229,6 +284,7 @@ class GameState extends ChangeNotifier {
     balance = 1500;
     reputation = 4.0;
     cityIndex = 0;
+    customCity = null;
     parts = {};
     courseProgress = {};
     loan = invested = taxDue = 0;
@@ -449,16 +505,36 @@ class GameState extends ChangeNotifier {
     return fare;
   }
 
+  /// Ticket price to a point: grows with distance.
+  int flightCost(double lat, double lng) {
+    final km = const Distance().as(LengthUnit.Kilometer, player, LatLng(lat, lng));
+    final v = (30 + km * 0.06).clamp(30.0, 900.0);
+    return (v / 5).round() * 5;
+  }
+
   bool flyTo(int i, {bool free = false}) {
-    if (i == cityIndex) return true;
-    if (!free && balance < 150) return false;
-    if (!free) _spend('fly'.tr, 150);
-    cityIndex = i;
+    final c = cities[i];
+    return flyToCity(c, index: i, free: free);
+  }
+
+  /// Moves the player's base to any city (one of the presets or one picked on the map).
+  bool flyToCity(City c, {int? index, bool free = false}) {
+    if (customCity == null && index != null && index == cityIndex) return true;
+    final cost = flightCost(c.lat, c.lng);
+    if (!free && balance < cost) return false;
+    if (!free) _spend('fly'.tr, cost.toDouble());
+    if (index != null) {
+      cityIndex = index;
+      customCity = null;
+    } else {
+      customCity = c;
+    }
     player = LatLng(city.lat, city.lng);
     orders.removeWhere((o) => o.status == 'available');
     for (var n = 0; n < 4; n++) {
       _spawnOrder(silent: true);
     }
+    AppLog.I.info('game', 'перелёт: ${c.names[1]} (\$$cost)');
     _changed();
     return true;
   }
@@ -676,6 +752,36 @@ class GameState extends ChangeNotifier {
     _changed();
   }
 
+  // ------------------------------------------------------------- display
+  void setLayoutMode(int m) {
+    layoutMode = m;
+    _changed();
+  }
+
+  void setUiScale(int pct) {
+    uiScalePct = pct.clamp(70, 160).toInt();
+    _changed();
+  }
+
+  Future<void> setFullscreen(bool v) async {
+    fullscreen = v;
+    _changed();
+    await WinService.setFullscreen(v);
+  }
+
+  Future<void> setWindowSize(int w, int h) async {
+    winW = w;
+    winH = h;
+    fullscreen = false;
+    _changed();
+    await WinService.setSize(w, h);
+  }
+
+  void setMapStyle(int m) {
+    mapStyle = m;
+    _changed();
+  }
+
   // --------------------------------------------------------------- admin
   void adminAddMoney(double v) {
     balance += v;
@@ -737,6 +843,24 @@ class GameState extends ChangeNotifier {
     forceOffline = v;
     AppLog.I.info('net', v ? 'админ: имитация «нет интернета» включена' : 'админ: имитация «нет интернета» выключена');
     notifyListeners();
+  }
+
+  void _applyAi() {
+    AiService.modelOverride = aiModel.isEmpty ? null : aiModel;
+    AiService.customUrl = aiCustomUrl;
+    AiService.customKey = aiCustomKey;
+    AiService.customModel = aiCustomModel;
+  }
+
+  /// Own OpenAI-compatible provider (empty url = back to Google).
+  void setAiProvider(String url, String key, String model) {
+    aiCustomUrl = url.trim();
+    aiCustomKey = key.trim();
+    aiCustomModel = model.trim();
+    _applyAi();
+    AiService.resume();
+    AppLog.I.info('admin', aiCustomUrl.isEmpty ? 'ИИ: провайдер Google' : 'ИИ: свой провайдер $aiCustomUrl, модель ${aiCustomModel.isEmpty ? 'по умолчанию' : aiCustomModel}');
+    _changed();
   }
 
   void setAiModel(String m) {

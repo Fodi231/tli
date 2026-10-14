@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 class Product {
   final String id, cat, device;
   final double price, rating;
@@ -20,7 +22,19 @@ class City {
 
   String name(String lang) {
     final i = const ['ru', 'en', 'uk'].indexOf(lang);
-    return names[i < 0 ? 0 : i];
+    final n = names[i < 0 ? 0 : i];
+    return n.isEmpty ? names[1] : n;
+  }
+
+  /// Rough typical temperature for a latitude and the current month
+  /// (used for cities picked on the world map; there is no weather service).
+  static String approxTemp(double lat, [DateTime? now]) {
+    final m = (now ?? DateTime.now()).month;
+    final a = lat.abs();
+    final peak = lat >= 0 ? 7 : 1;
+    final season = (a / 90) * 16 * math.cos((m - peak) * math.pi / 6);
+    final t = 29 - 0.55 * a + season;
+    return '${t.round()}°C';
   }
 }
 

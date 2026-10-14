@@ -116,6 +116,9 @@ class _AdminPanelState extends State<AdminPanel> {
   String logFilter = 'all';
   final balanceCtrl = TextEditingController();
   final modelCtrl = TextEditingController();
+  final urlCtrl = TextEditingController();
+  final ckeyCtrl = TextEditingController();
+  final cmodelCtrl = TextEditingController();
   bool testing = false;
   String? testResult;
   bool testOk = false;
@@ -123,13 +126,20 @@ class _AdminPanelState extends State<AdminPanel> {
   @override
   void initState() {
     super.initState();
-    modelCtrl.text = context.read<GameState>().aiModel;
+    final gs = context.read<GameState>();
+    modelCtrl.text = gs.aiModel;
+    urlCtrl.text = gs.aiCustomUrl;
+    ckeyCtrl.text = gs.aiCustomKey;
+    cmodelCtrl.text = gs.aiCustomModel;
   }
 
   @override
   void dispose() {
     balanceCtrl.dispose();
     modelCtrl.dispose();
+    urlCtrl.dispose();
+    ckeyCtrl.dispose();
+    cmodelCtrl.dispose();
     super.dispose();
   }
 
@@ -150,6 +160,19 @@ class _AdminPanelState extends State<AdminPanel> {
               ...children,
             ],
           ),
+        ),
+      );
+
+  Widget _field(TextEditingController c, String hint, {bool obscure = false}) => TextField(
+        controller: c,
+        obscureText: obscure,
+        autocorrect: false,
+        decoration: InputDecoration(
+          hintText: hint,
+          isDense: true,
+          filled: true,
+          fillColor: C.card2,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
         ),
       );
 
@@ -428,6 +451,58 @@ class _AdminPanelState extends State<AdminPanel> {
               padding: const EdgeInsets.only(top: 10),
               child: SelectableText(testResult!, style: TextStyle(fontSize: 12, color: testOk ? C.green : C.red)),
             ),
+          if (!testOk && AiService.fixUrl != null) ...[
+            const SizedBox(height: 10),
+            const Text(
+              'Google пишет, что нужный API выключен в проекте ключа. Скопируйте ссылку, откройте её в браузере, нажмите «Включить» (Enable), подождите 2–5 минут и проверьте снова. Либо создайте ключ AIza… на aistudio.google.com/apikey — он работает без этого шага.',
+              style: TextStyle(fontSize: 12, color: C.orange),
+            ),
+            const SizedBox(height: 6),
+            SelectableText(AiService.fixUrl!, style: const TextStyle(fontSize: 11, color: C.accent)),
+            const SizedBox(height: 6),
+            _btn('Скопировать ссылку', () {
+              Clipboard.setData(ClipboardData(text: AiService.fixUrl!));
+              toast(context, 'Скопировано');
+            }),
+          ],
+        ]),
+        _section('Свой ИИ-провайдер (OpenAI-совместимый)', [
+          const Text(
+            'Если ключ Google не работает, подставьте любой бесплатный сервис, например Groq или OpenRouter. Пустой адрес = использовать Google. Ключ хранится только на этом устройстве.',
+            style: TextStyle(fontSize: 12, color: C.sub),
+          ),
+          const SizedBox(height: 8),
+          Wrap(spacing: 8, runSpacing: 4, children: [
+            for (final pr in aiPresets)
+              ActionChip(
+                label: Text(pr.name, style: const TextStyle(fontSize: 11)),
+                onPressed: () => setState(() {
+                  urlCtrl.text = pr.url;
+                  cmodelCtrl.text = pr.model;
+                }),
+              ),
+          ]),
+          const SizedBox(height: 8),
+          _field(urlCtrl, 'Адрес API (…/v1)'),
+          const SizedBox(height: 6),
+          _field(ckeyCtrl, 'API-ключ', obscure: true),
+          const SizedBox(height: 6),
+          _field(cmodelCtrl, 'Модель'),
+          const SizedBox(height: 8),
+          Row(children: [
+            _btn('Сохранить', () {
+              g.setAiProvider(urlCtrl.text, ckeyCtrl.text, cmodelCtrl.text);
+              toast(context, 'Сохранено');
+            }),
+            const SizedBox(width: 8),
+            _btn('Вернуть Google', () {
+              urlCtrl.clear();
+              ckeyCtrl.clear();
+              cmodelCtrl.clear();
+              g.setAiProvider('', '', '');
+              toast(context, 'Провайдер Google');
+            }, color: C.red),
+          ]),
         ]),
         _section('Модель', [
           Row(children: [

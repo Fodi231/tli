@@ -56,29 +56,68 @@ class _MessagesAppState extends State<MessagesApp> {
     });
   }
 
+  Widget _newBtn(BuildContext context) => TextButton.icon(
+        onPressed: () {
+          final nd = context.read<GameState>().spawnDeal('buy');
+          setState(() => openId = nd.id);
+        },
+        icon: const Icon(Icons.add, size: 18),
+        label: Text('new_deal'.tr, style: const TextStyle(fontSize: 12)),
+      );
+
   @override
   Widget build(BuildContext context) {
     final gs = context.watch<GameState>();
     final d = _deal(gs);
-    if (d == null) return _list(context, gs);
-    _scrollDown();
-    return _chat(context, d);
+    return LayoutBuilder(builder: (context, box) {
+      // Tablet / PC: conversation list on the left, chat on the right.
+      if (box.maxWidth >= 800) {
+        if (d != null) _scrollDown();
+        return AppPage(
+          title: 'messages'.tr,
+          wide: true,
+          actions: [_newBtn(context)],
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(width: 340, child: _listBody(context, gs)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: d == null
+                    ? Empty('no_deals'.tr)
+                    : Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text('${d.counterpart} · ${d.item}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                            ),
+                          ),
+                          Expanded(child: _chatBody(context, d)),
+                        ],
+                      ),
+              ),
+            ],
+          ),
+        );
+      }
+      if (d == null) return _list(context, gs);
+      _scrollDown();
+      return _chat(context, d);
+    });
   }
 
   Widget _list(BuildContext context, GameState gs) {
     return AppPage(
       title: 'messages'.tr,
-      actions: [
-        TextButton.icon(
-          onPressed: () {
-            final nd = context.read<GameState>().spawnDeal('buy');
-            setState(() => openId = nd.id);
-          },
-          icon: const Icon(Icons.add, size: 18),
-          label: Text('new_deal'.tr, style: const TextStyle(fontSize: 12)),
-        ),
-      ],
-      child: gs.deals.isEmpty
+      actions: [_newBtn(context)],
+      child: _listBody(context, gs),
+    );
+  }
+
+  Widget _listBody(BuildContext context, GameState gs) {
+    return gs.deals.isEmpty
           ? Empty('no_deals'.tr)
           : ListView.separated(
               itemCount: gs.deals.length,
@@ -109,8 +148,7 @@ class _MessagesAppState extends State<MessagesApp> {
                   ),
                 );
               },
-            ),
-    );
+            );
   }
 
   Widget _statusChip(Deal d) {
@@ -120,17 +158,22 @@ class _MessagesAppState extends State<MessagesApp> {
   }
 
   Widget _chat(BuildContext context, Deal d) {
-    final open = d.status == 'open';
-    final online = context.watch<GameState>().online;
-    final canSend = open && online && !d.busy;
-    final base = d.market;
-    final quick = d.kind == 'buy' ? [0.7, 0.8, 0.9] : [1.0, 1.1, 1.2];
     return AppPage(
       title: '${d.counterpart} · ${d.item}',
       actions: [
         IconButton(icon: const Icon(Icons.list), onPressed: () => setState(() => openId = null)),
       ],
-      child: Column(
+      child: _chatBody(context, d),
+    );
+  }
+
+  Widget _chatBody(BuildContext context, Deal d) {
+    final open = d.status == 'open';
+    final online = context.watch<GameState>().online;
+    final canSend = open && online && !d.busy;
+    final base = d.market;
+    final quick = d.kind == 'buy' ? [0.7, 0.8, 0.9] : [1.0, 1.1, 1.2];
+    return Column(
         children: [
           Panel(
             padding: const EdgeInsets.all(8),
@@ -249,7 +292,6 @@ class _MessagesAppState extends State<MessagesApp> {
             ),
           ],
         ],
-      ),
-    );
+      );
   }
 }

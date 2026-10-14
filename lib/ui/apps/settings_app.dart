@@ -12,6 +12,7 @@ import '../../core/app_log.dart';
 import '../../core/game_state.dart';
 import '../../core/i18n.dart';
 import '../../core/theme.dart';
+import '../../core/window_service.dart';
 import '../../core/wallpaper_cfg.dart';
 import '../../core/wallpapers.dart';
 import '../shell.dart';
@@ -39,6 +40,8 @@ class _SettingsAppState extends State<SettingsApp> {
   late final TextEditingController keyCtrl;
   late final TextEditingController nameCtrl;
 
+  double? _uiTmp; // slider value while dragging
+
   // wallpaper editing
   String _target = 'home'; // which wallpaper the appearance page edits
   WallpaperCfg? _draft; // photo being cropped
@@ -51,6 +54,7 @@ class _SettingsAppState extends State<SettingsApp> {
   static const _groups = <List<_Item>>[
     [
       _Item('appearance', 'appearance', Icons.palette, Color(0xFF3B82F6)),
+      _Item('display', 'display', Icons.desktop_windows, Color(0xFF0EA5E9)),
       _Item('notifications', 'notifications', Icons.notifications, Color(0xFFEF4444)),
       _Item('sound', 'sound_vibe', Icons.volume_up, Color(0xFFEC4899)),
     ],
@@ -160,6 +164,8 @@ class _SettingsAppState extends State<SettingsApp> {
         return AppPage(title: 'appearance'.tr, onBack: onBack, child: _appearance(gs));
       case 'crop':
         return AppPage(title: 'wp_crop'.tr, onBack: _toAppearance, child: _crop(gs));
+      case 'display':
+        return AppPage(title: 'display'.tr, onBack: onBack, child: _display(gs));
       case 'notifications':
         return AppPage(title: 'notifications'.tr, onBack: onBack, child: _notifications(gs));
       case 'sound':
@@ -590,6 +596,94 @@ class _SettingsAppState extends State<SettingsApp> {
   }
 
   // ------------------------------------------------------------- the rest
+  Widget _choice(List<String> labels, int selected, ValueChanged<int> onSel) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (var i = 0; i < labels.length; i++)
+          ChoiceChip(
+            label: Text(labels[i]),
+            selected: selected == i,
+            onSelected: (_) => onSel(i),
+          ),
+      ],
+    );
+  }
+
+  Widget _display(GameState gs) {
+    const sizes = [
+      [1024, 768],
+      [1280, 720],
+      [1366, 768],
+      [1600, 900],
+      [1920, 1080],
+    ];
+    final g = context.read<GameState>();
+    final ui = _uiTmp ?? gs.uiScalePct.toDouble();
+    Widget title(String t) => Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Text(t, style: const TextStyle(color: C.sub, fontWeight: FontWeight.w600)),
+        );
+    return ListView(children: [
+      title('layout_mode'.tr),
+      _choice(['layout_auto'.tr, 'layout_phone'.tr, 'layout_tablet'.tr], gs.layoutMode, g.setLayoutMode),
+      const SizedBox(height: 6),
+      Text('layout_hint'.tr, style: const TextStyle(color: C.sub, fontSize: 12)),
+      const SizedBox(height: 18),
+      title('${'ui_scale'.tr}: ${ui.round()}%'),
+      Slider(
+        value: ui.clamp(70.0, 160.0).toDouble(),
+        min: 70,
+        max: 160,
+        divisions: 18,
+        label: '${ui.round()}%',
+        onChanged: (v) => setState(() => _uiTmp = v),
+        onChangeEnd: (v) {
+          g.setUiScale(v.round());
+          setState(() => _uiTmp = null);
+        },
+      ),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton(onPressed: () => g.setUiScale(100), child: Text('reset_100'.tr)),
+      ),
+      const SizedBox(height: 12),
+      if (WinService.isDesktop) ...[
+        _group([
+          _switch(Icons.fullscreen, const Color(0xFF8B5CF6), 'fullscreen'.tr, gs.fullscreen, (v) => g.setFullscreen(v)),
+        ], footer: 'fullscreen_hint'.tr),
+        title('window_size'.tr),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final z in sizes)
+              ChoiceChip(
+                label: Text('${z[0]} × ${z[1]}'),
+                selected: !gs.fullscreen && gs.winW == z[0] && gs.winH == z[1],
+                onSelected: (_) => g.setWindowSize(z[0], z[1]),
+              ),
+            ActionChip(
+              avatar: const Icon(Icons.open_in_full, size: 16),
+              label: Text('maximize'.tr),
+              onPressed: () => WinService.maximize(),
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
+      ] else
+        Padding(
+          padding: const EdgeInsets.only(bottom: 18),
+          child: Text('desktop_only_hint'.tr, style: const TextStyle(color: C.sub, fontSize: 12)),
+        ),
+      title('map_style'.tr),
+      _choice(['style_auto'.tr, 'style_streets'.tr, 'style_sat'.tr, 'style_offline'.tr], gs.mapStyle, g.setMapStyle),
+      const SizedBox(height: 6),
+      Text('map_style_hint'.tr, style: const TextStyle(color: C.sub, fontSize: 12)),
+    ]);
+  }
+
   Widget _notifications(GameState gs) {
     final g = context.read<GameState>();
     return ListView(children: [

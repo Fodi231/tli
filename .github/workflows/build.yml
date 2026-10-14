@@ -23,7 +23,7 @@ jobs:
           sed -i 's|android:label="[^"]*"|android:label="TechLife"|' android/app/src/main/AndroidManifest.xml
           sed -i 's|<application|<uses-permission android:name="android.permission.INTERNET"/>\n    <application|' android/app/src/main/AndroidManifest.xml
       - run: flutter pub get
-      - run: dart run flutter_launcher_icons -f flutter_launcher_icons-android.yaml
+      - run: dart run flutter_launcher_icons -f icon_cfg/android.yaml
       - run: flutter build apk --release --dart-define=GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }} --dart-define=ADMIN_HASH=${{ secrets.ADMIN_HASH }}
       - uses: actions/upload-artifact@v4
         with: { name: techlife-apk, path: build/app/outputs/flutter-apk/app-release.apk }
@@ -59,7 +59,7 @@ jobs:
         run: |
           sed -i 's/techlife/TechLife/g' web/index.html web/manifest.json
       - run: flutter pub get
-      - run: dart run flutter_launcher_icons -f flutter_launcher_icons-web.yaml
+      - run: dart run flutter_launcher_icons -f icon_cfg/web.yaml
       - run: flutter build web --release --base-href "/${{ github.event.repository.name }}/" --dart-define=ADMIN_HASH=${{ secrets.ADMIN_HASH }}
       - uses: actions/upload-artifact@v4
         with: { name: techlife-web, path: build/web }
@@ -93,7 +93,7 @@ jobs:
           /usr/libexec/PlistBuddy -c "Set :CFBundleName TechLife" $PL
           /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string TechLife uses your photos to set a wallpaper" $PL || true
       - run: flutter pub get
-      - run: dart run flutter_launcher_icons -f flutter_launcher_icons-ios.yaml
+      - run: dart run flutter_launcher_icons -f icon_cfg/ios.yaml
       - run: flutter build ios --release --no-codesign --dart-define=GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }} --dart-define=ADMIN_HASH=${{ secrets.ADMIN_HASH }}
       - run: |
           mkdir Payload

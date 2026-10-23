@@ -36,7 +36,7 @@ jobs:
           sed -i 's|<application|<uses-permission android:name="android.permission.INTERNET"/>\n    <application|' android/app/src/main/AndroidManifest.xml
       - run: flutter pub get
       - run: rm -f flutter_launcher_icons-*.yaml && dart run flutter_launcher_icons -f icon_cfg/android.yaml
-      - run: flutter build apk --release --dart-define=GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+      - run: flutter build apk --release
       - uses: actions/upload-artifact@v4
         with: { name: techlife-apk, path: build/app/outputs/flutter-apk/app-release.apk }
 
@@ -57,7 +57,7 @@ jobs:
           cp assets/icon/app_icon.ico windows/runner/resources/app_icon.ico
           grep -n "TechLife\|techlife" windows/CMakeLists.txt windows/runner/main.cpp windows/runner/Runner.rc || true
       - run: flutter pub get
-      - run: flutter build windows --release --dart-define=GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+      - run: flutter build windows --release
       - uses: actions/upload-artifact@v4
         with: { name: techlife-windows, path: build/windows/x64/runner/Release }
 
@@ -109,7 +109,7 @@ jobs:
           /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string TechLife uses your photos to set a wallpaper" $PL || true
       - run: flutter pub get
       - run: rm -f flutter_launcher_icons-*.yaml && dart run flutter_launcher_icons -f icon_cfg/ios.yaml
-      - run: flutter build ios --release --no-codesign --dart-define=GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+      - run: flutter build ios --release --no-codesign
       - run: |
           mkdir Payload
           cp -r build/ios/iphoneos/Runner.app Payload/

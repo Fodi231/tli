@@ -17,7 +17,9 @@ void main() {
   setUp(() {
     I18n.lang = 'ru';
     AiService.resume();
+    AiService.managedEnabled = false;
     AiService.customUrl = '';
+    AiService.googleEndpoint = 'gemini';
     AiService.modelOverride = null;
   });
   tearDown(() {
@@ -118,7 +120,10 @@ void main() {
       final d = gs.openMarketDeal('m01')!;
       AiService.client = MockClient((request) async {
         expect(request.url.host, 'generativelanguage.googleapis.com');
-        expect(request.url.path, contains('gemini-3.8-flash:generateContent'));
+        expect(
+          request.url.path,
+          contains('gemini-3.5-flash-lite:generateContent'),
+        );
         expect(request.headers['x-goog-api-key'], 'AIza_test_not_a_real_key');
         final body = jsonDecode(request.body);
         expect(

@@ -1,0 +1,908 @@
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+
+import '../../core/repair/repair_session.dart';
+import '../../core/repair/repair_strings.dart';
+import 'workbench_geometry.dart';
+
+const benchBlue = Color(0xFF57C5FF);
+const benchGreen = Color(0xFF65E6AE);
+const benchInk = Color(0xFF101820);
+
+class WorkbenchPainter extends CustomPainter {
+  final WorkbenchGeometry geometry;
+  final RepairSession session;
+  final String device;
+  final double zoom, pulse, hold;
+  final Offset pan;
+  final String? dragTarget, holdingTarget;
+  final Offset? dragPosition;
+  WorkbenchPainter({
+    required this.geometry,
+    required this.session,
+    required this.device,
+    required this.zoom,
+    required this.pan,
+    required this.pulse,
+    this.hold = 0,
+    this.holdingTarget,
+    this.dragTarget,
+    this.dragPosition,
+  });
+
+  double fit(Size size) => math.min(
+    size.width / geometry.size.width,
+    size.height / geometry.size.height,
+  );
+  Offset fromLocal(Offset p, Size viewport) =>
+      (p - viewport.center(Offset.zero) - pan) / (fit(viewport) * zoom) +
+      geometry.size.center(Offset.zero);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.translate(size.width / 2 + pan.dx, size.height / 2 + pan.dy);
+    canvas.scale(fit(size) * zoom);
+    canvas.translate(-geometry.size.width / 2, -geometry.size.height / 2);
+    final g = geometry;
+    final s = session;
+    // Thin technical grid makes the physical work area readable over the photo.
+    final grid =
+        Paint()
+          ..color = Colors.white.withValues(alpha: .025)
+          ..strokeWidth = .7;
+    for (double x = 20; x < g.size.width; x += 32) {
+      canvas.drawLine(Offset(x, 60), Offset(x, g.size.height - 25), grid);
+    }
+    for (double y = 60; y < g.size.height; y += 32) {
+      canvas.drawLine(Offset(20, y), Offset(g.size.width - 20, y), grid);
+    }
+    _tray(canvas, g.newTray, rt('r_new'), benchGreen);
+    _tray(canvas, g.oldTray, rt('r_old'), const Color(0xFFF1AC83));
+    _tray(canvas, g.partsTray, rt('r_tray'), benchBlue);
+    final rest = RRect.fromRectAndRadius(
+      g.parkedDisplay.inflate(9),
+      const Radius.circular(32),
+    );
+    canvas.drawRRect(
+      rest,
+      Paint()..color = Colors.black.withValues(alpha: .18),
+    );
+    canvas.drawRRect(
+      rest,
+      Paint()
+        ..color = Colors.white.withValues(alpha: .10)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
+    _text(
+      canvas,
+      rt('r_display_place'),
+      Offset(g.parkedDisplay.center.dx, g.parkedDisplay.bottom + 20),
+      11,
+      Colors.white54,
+      centered: true,
+      spacing: 1.5,
+    );
+    _body(canvas);
+    final noScreen = s.service == 'display' && s.partRemoved;
+    if (s.isOpen && !noScreen && dragTarget != 'screen') {
+      _displayBack(
+        canvas,
+        g.parkedDisplay,
+        fresh: s.newPartInstalled && s.service == 'display',
+      );
+    }
+    if (s.isOpen && !s.done('part_off')) _flex(canvas);
+    if (!s.newPartInstalled &&
+        s.service != 'diag' &&
+        dragTarget != 'new_part') {
+      _component(canvas, s.service, g.newTray.deflate(34), fresh: true);
+    } else if (s.service != 'diag') {
+      _text(
+        canvas,
+        '✓ ${rt('r_installed')}',
+        g.newTray.center,
+        14,
+        benchGreen,
+        centered: true,
+      );
+    }
+    if (s.done('part_out')) {
+      _component(canvas, s.service, g.oldTray.deflate(32), fresh: false);
+    }
+    if (s.shieldRemoved && dragTarget != 'stored_shield') {
+      _shield(canvas, g.rect('stored_shield', s).deflate(6));
+    }
+    // Collected screws are physical marks in the tray, independent of the HUD.
+    final count =
+        (s.done('frame_out') && !s.done('frame_in') ? 2 : 0) +
+        (s.done('shield_screws_out') && !s.done('shield_screws_in') ? 3 : 0);
+    for (var i = 0; i < count; i++) {
+      _screw(canvas, g.partsTray.topLeft + Offset(25 + i * 19, 44), .7);
+    }
+    if (s.hints && !s.finished) _highlights(canvas);
+    if (dragTarget != null && dragPosition != null) {
+      final source = g.rect(dragTarget!, s);
+      final r = Rect.fromCenter(
+        center: dragPosition!,
+        width: source.width,
+        height: source.height,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          r.shift(const Offset(8, 10)),
+          const Radius.circular(12),
+        ),
+        Paint()
+          ..color = Colors.black38
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12),
+      );
+      if (dragTarget == 'screen') {
+        if (s.isOpen) {
+          _displayBack(canvas, r, fresh: s.newPartInstalled);
+        } else {
+          _screen(canvas, r, cracked: s.service == 'display');
+        }
+      } else if (dragTarget!.contains('shield')) {
+        _shield(canvas, r);
+      } else if (dragTarget!.startsWith('adhesive')) {
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(r, const Radius.circular(6)),
+          Paint()..color = Colors.white70,
+        );
+      } else {
+        _component(canvas, s.service, r, fresh: dragTarget == 'new_part');
+      }
+    }
+    if (holdingTarget != null && hold > 0) {
+      final c = g.rect(holdingTarget!, s).center;
+      canvas.drawCircle(c, 30, Paint()..color = benchInk.withValues(alpha: .9));
+      canvas.drawArc(
+        Rect.fromCircle(center: c, radius: 27),
+        -math.pi / 2,
+        2 * math.pi * hold,
+        false,
+        Paint()
+          ..color = benchGreen
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeWidth = 5,
+      );
+      _text(
+        canvas,
+        '${(hold * 100).round()}%',
+        c,
+        13,
+        Colors.white,
+        centered: true,
+      );
+    }
+    _text(
+      canvas,
+      device,
+      Offset(g.phone.center.dx, g.phone.bottom + 32),
+      15,
+      Colors.white70,
+      centered: true,
+      spacing: 1,
+    );
+    canvas.restore();
+  }
+
+  void _tray(Canvas c, Rect r, String label, Color color) {
+    c.drawRRect(
+      RRect.fromRectAndRadius(
+        r.shift(const Offset(0, 5)),
+        const Radius.circular(16),
+      ),
+      Paint()..color = Colors.black38,
+    );
+    c.drawRRect(
+      RRect.fromRectAndRadius(r, const Radius.circular(16)),
+      Paint()
+        ..shader = LinearGradient(
+          colors: [
+            const Color(0xFF26323C).withValues(alpha: .97),
+            benchInk.withValues(alpha: .97),
+          ],
+        ).createShader(r),
+    );
+    c.drawRRect(
+      RRect.fromRectAndRadius(r, const Radius.circular(16)),
+      Paint()
+        ..color = color.withValues(alpha: .35)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
+    _text(c, label, r.topLeft + const Offset(14, 15), 10, color, spacing: 1.2);
+  }
+
+  void _body(Canvas c) {
+    final s = session;
+    final g = geometry;
+    final p = g.phone;
+    final android = !device.toLowerCase().contains('iphone');
+    final radius = android ? 24.0 : 36.0;
+    c.drawRRect(
+      RRect.fromRectAndRadius(
+        p.shift(const Offset(9, 18)),
+        Radius.circular(radius),
+      ),
+      Paint()
+        ..color = Colors.black.withValues(alpha: .65)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 15),
+    );
+    c.drawRRect(
+      RRect.fromRectAndRadius(p.inflate(4), Radius.circular(radius)),
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFFB7BCC6),
+            Color(0xFF454B57),
+            Color(0xFF9C9FA8),
+            Color(0xFF343944),
+          ],
+        ).createShader(p),
+    );
+    c.drawRRect(
+      RRect.fromRectAndRadius(p, Radius.circular(radius - 2)),
+      Paint()..color = const Color(0xFF11151C),
+    );
+    c.drawRRect(
+      RRect.fromRectAndRadius(p.deflate(6), Radius.circular(radius - 6)),
+      Paint()..color = const Color(0xFF292B30),
+    );
+    // Physical side button is always visible and touchable.
+    c.drawRRect(
+      RRect.fromRectAndRadius(
+        g.rect('power', s).deflate(6),
+        const Radius.circular(4),
+      ),
+      Paint()..color = const Color(0xFFB0B6C3),
+    );
+    if (!s.isOpen) {
+      if (dragTarget != 'screen') {
+        _screen(
+          c,
+          p.deflate(9),
+          cracked: s.service == 'display' && !s.newPartInstalled,
+        );
+      }
+    } else {
+      // Motherboard, shielding cans and fine traces.
+      final board = Rect.fromLTWH(p.left + 147, p.top + 34, 56, 335);
+      c.drawRRect(
+        RRect.fromRectAndRadius(board, const Radius.circular(7)),
+        Paint()..color = const Color(0xFF14332F),
+      );
+      final trace =
+          Paint()
+            ..color = const Color(0xFFB69E62).withValues(alpha: .6)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.2;
+      for (var i = 0; i < 11; i++) {
+        final y = p.top + 55 + i * 25;
+        final path =
+            Path()
+              ..moveTo(p.left + 151, y.toDouble())
+              ..lineTo(p.left + 165, y.toDouble())
+              ..lineTo(p.left + 174, y + 8)
+              ..lineTo(p.left + 197, y + 8);
+        c.drawPath(path, trace);
+        c.drawCircle(
+          Offset(p.left + 198, y + 8),
+          2.4,
+          Paint()..color = const Color(0xFFD3BB77),
+        );
+      }
+      for (var i = 0; i < 4; i++) {
+        final chip = Rect.fromLTWH(p.left + 157, p.top + 50 + i * 38, 36, 26);
+        c.drawRRect(
+          RRect.fromRectAndRadius(chip, const Radius.circular(3)),
+          Paint()
+            ..shader = const LinearGradient(
+              colors: [Color(0xFFA1A8A7), Color(0xFF535C60)],
+            ).createShader(chip),
+        );
+        _text(
+          c,
+          'TL ${120 + i}',
+          chip.center,
+          6,
+          Colors.black54,
+          centered: true,
+        );
+      }
+      for (final part in ['battery', 'camera', 'port']) {
+        if (!(s.service == part && s.partRemoved) && dragTarget != part) {
+          _component(
+            c,
+            part,
+            g.rect(part, s),
+            fresh: s.service == part && s.newPartInstalled,
+          );
+        } else {
+          c.drawRRect(
+            RRect.fromRectAndRadius(g.rect(part, s), const Radius.circular(7)),
+            Paint()..color = Colors.black54,
+          );
+        }
+      }
+      for (final id in ['battery_connector', 'part_connector']) {
+        final disconnected =
+            id == 'battery_connector'
+                ? s.batteryDisconnected
+                : s.done('part_off') && !s.done('part_on');
+        final r = g.rect(id, s);
+        c.drawRRect(
+          RRect.fromRectAndRadius(
+            r.shift(Offset(disconnected ? -9 : 0, 0)),
+            const Radius.circular(3),
+          ),
+          Paint()
+            ..color =
+                disconnected
+                    ? const Color(0xFFCA7F3E)
+                    : const Color(0xFFDCB873),
+        );
+        for (var i = 0; i < 5; i++) {
+          c.drawLine(
+            r.topLeft + Offset(4 + i * 5, 4),
+            r.topLeft + Offset(4 + i * 5, 15),
+            Paint()
+              ..color = Colors.black38
+              ..strokeWidth = 1,
+          );
+        }
+      }
+      if (!s.shieldRemoved && dragTarget != 'shield') {
+        _shield(c, g.rect('shield', s));
+      }
+      for (var i = 0; i < 3; i++) {
+        final id = 'shield_$i';
+        final absent =
+            s.done('shield_screws_out') && !s.done('shield_screws_in');
+        final inCurrent = s.current?.targets.contains(id) == true;
+        if ((!absent || s.current?.id == 'shield_screws_in') &&
+            !(inCurrent && s.targetDone(id))) {
+          _screw(c, g.rect(id, s).center, 1, turns: s.turnsFor(id));
+        }
+      }
+      if (s.service == 'camera' || s.service == 'port') {
+        for (var i = 0; i < (s.service == 'port' ? 3 : 2); i++) {
+          final id = 'part_$i';
+          if (!(s.done('part_screws_out') && !s.done('part_screws_in')) ||
+              s.current?.id == 'part_screws_in') {
+            if (!s.targetDone(id)) {
+              _screw(c, g.rect(id, s).center, .85, turns: s.turnsFor(id));
+            }
+          }
+        }
+      }
+      if (s.service == 'battery' && !s.done('adhesive_out')) {
+        for (var i = 0; i < 2; i++) {
+          final id = 'adhesive_$i';
+          if (s.targetDone(id) || dragTarget == id) continue;
+          c.drawRRect(
+            RRect.fromRectAndRadius(g.rect(id, s), const Radius.circular(5)),
+            Paint()..color = const Color(0xFFEBE0CF),
+          );
+        }
+      }
+    }
+    for (var i = 0; i < 2; i++) {
+      final id = 'frame_$i';
+      if (!(s.done('frame_out') && !s.done('frame_in')) ||
+          s.current?.id == 'frame_in') {
+        if (!s.targetDone(id)) {
+          _screw(c, g.rect(id, s).center, .9, turns: s.turnsFor(id));
+        }
+      }
+    }
+  }
+
+  void _screen(Canvas c, Rect r, {bool cracked = false}) {
+    final s = session;
+    c.drawRRect(
+      RRect.fromRectAndRadius(r, const Radius.circular(27)),
+      Paint()..color = Colors.black,
+    );
+    final glass = r.deflate(4);
+    if (s.powered) {
+      c.drawRRect(
+        RRect.fromRectAndRadius(glass, const Radius.circular(25)),
+        Paint()
+          ..shader = const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF0E3D60),
+              Color(0xFF244BA8),
+              Color(0xFF65ACCE),
+              Color(0xFF122536),
+            ],
+          ).createShader(glass),
+      );
+      c.save();
+      c.clipRRect(RRect.fromRectAndRadius(glass, const Radius.circular(25)));
+      c.drawOval(
+        Rect.fromCenter(
+          center: r.center + const Offset(80, 130),
+          width: 260,
+          height: 450,
+        ),
+        Paint()..color = const Color(0xFF91D4E5).withValues(alpha: .28),
+      );
+      c.restore();
+      _text(
+        c,
+        'TECHLIFE',
+        r.topCenter + const Offset(0, 68),
+        13,
+        Colors.white70,
+        centered: true,
+        spacing: 2,
+      );
+      _text(
+        c,
+        s.finished ? '✓' : '09:41',
+        r.topCenter + const Offset(0, 109),
+        36,
+        Colors.white,
+        centered: true,
+      );
+    } else {
+      c.drawRRect(
+        RRect.fromRectAndRadius(glass, const Radius.circular(25)),
+        Paint()
+          ..shader = const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF151F27), Color(0xFF05080B)],
+          ).createShader(glass),
+      );
+      c.drawLine(
+        glass.topLeft + const Offset(24, 46),
+        glass.bottomRight - const Offset(28, 76),
+        Paint()
+          ..color = Colors.white.withValues(alpha: .025)
+          ..strokeWidth = 56,
+      );
+    }
+    c.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: r.topCenter + const Offset(0, 16),
+          width: 62,
+          height: 14,
+        ),
+        const Radius.circular(10),
+      ),
+      Paint()..color = const Color(0xFF060B10),
+    );
+    c.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: r.bottomCenter - const Offset(0, 12),
+          width: 72,
+          height: 3,
+        ),
+        const Radius.circular(2),
+      ),
+      Paint()..color = Colors.white38,
+    );
+    if (cracked) {
+      final origin = r.topLeft + Offset(r.width * .33, r.height * .54);
+      final p =
+          Paint()
+            ..color = Colors.white.withValues(alpha: .64)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1;
+      for (var i = 0; i < 8; i++) {
+        final angle = i * math.pi / 4 + .2;
+        final end =
+            origin + Offset(math.cos(angle) * 83, math.sin(angle) * 147);
+        final middle =
+            Offset.lerp(origin, end, .5)! + Offset(i.isEven ? 9 : -7, 4);
+        c.drawPath(
+          Path()
+            ..moveTo(origin.dx, origin.dy)
+            ..lineTo(middle.dx, middle.dy)
+            ..lineTo(end.dx, end.dy),
+          p,
+        );
+        c.drawLine(middle, middle + Offset(i.isEven ? 22 : -15, 17), p);
+      }
+      if (s.powered) {
+        c.drawRect(
+          Rect.fromLTWH(r.left + 16, r.top + 35, 3, r.height - 70),
+          Paint()..color = const Color(0xFFB5FF66),
+        );
+      }
+    }
+    if (s.current?.id == 'test') {
+      for (final id in s.current!.targets) {
+        final test = geometry.rect(id, s);
+        final ok = s.targetDone(id);
+        c.drawRRect(
+          RRect.fromRectAndRadius(test, const Radius.circular(13)),
+          Paint()..color = benchInk.withValues(alpha: .9),
+        );
+        _text(
+          c,
+          '${ok ? '✓ ' : ''}${rt('r_$id')}',
+          test.center,
+          14,
+          ok ? benchGreen : Colors.white,
+          centered: true,
+        );
+      }
+    }
+  }
+
+  void _displayBack(Canvas c, Rect r, {required bool fresh}) {
+    final k = math.min(1.0, r.width / 224);
+    final radius = Radius.circular(28 * k);
+    c.drawRRect(
+      RRect.fromRectAndRadius(r.shift(Offset(6 * k, 10 * k)), radius),
+      Paint()..color = Colors.black45,
+    );
+    c.drawRRect(
+      RRect.fromRectAndRadius(r, radius),
+      Paint()
+        ..shader = const LinearGradient(
+          colors: [Color(0xFFA3A6AF), Color(0xFF333941), Color(0xFF959AA0)],
+        ).createShader(r),
+    );
+    final inside = r.deflate(8 * k);
+    c.drawRRect(
+      RRect.fromRectAndRadius(inside, Radius.circular(22 * k)),
+      Paint()..color = const Color(0xFF10151A),
+    );
+    c.drawRRect(
+      RRect.fromRectAndRadius(inside.deflate(14 * k), Radius.circular(14 * k)),
+      Paint()
+        ..shader = const LinearGradient(
+          colors: [Color(0xFF272B31), Color(0xFF12181C)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ).createShader(inside),
+    );
+    for (final y in [.18, .45, .72]) {
+      c.drawRect(
+        Rect.fromLTWH(
+          r.left + 10 * k,
+          r.top + r.height * y,
+          r.width - 20 * k,
+          14 * k,
+        ),
+        Paint()..color = const Color(0xFF41474D),
+      );
+    }
+    _text(
+      c,
+      fresh ? 'OLED · QC OK' : 'OLED',
+      r.center,
+      12 * k,
+      fresh ? benchGreen : Colors.white30,
+      centered: true,
+      spacing: 2 * k,
+    );
+  }
+
+  void _component(Canvas c, String type, Rect r, {required bool fresh}) {
+    if (r.width <= 0 || r.height <= 0) return;
+    final color = fresh ? benchGreen : const Color(0xFFCF9882);
+    switch (type) {
+      case 'display':
+        final landscape = r.width > r.height;
+        final space = landscape ? Size(r.height, r.width) : r.size;
+        final w = math.min(space.width, space.height * .51);
+        c.save();
+        c.translate(r.center.dx, r.center.dy);
+        if (landscape) c.rotate(-math.pi / 2);
+        _displayBack(
+          c,
+          Rect.fromCenter(
+            center: Offset.zero,
+            width: w,
+            height: math.min(space.height, w * 1.96),
+          ),
+          fresh: fresh,
+        );
+        c.restore();
+        break;
+      case 'battery':
+        c.drawRRect(
+          RRect.fromRectAndRadius(r, const Radius.circular(8)),
+          Paint()
+            ..shader = const LinearGradient(
+              colors: [Color(0xFF35373B), Color(0xFF111418)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ).createShader(r),
+        );
+        c.drawRRect(
+          RRect.fromRectAndRadius(r.deflate(3), const Radius.circular(6)),
+          Paint()
+            ..color = Colors.white12
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1,
+        );
+        if (r.height > 110) {
+          _text(
+            c,
+            'Li-ion',
+            r.center - const Offset(0, 32),
+            16,
+            Colors.white60,
+            centered: true,
+          );
+          _text(
+            c,
+            '3.85V  •  12.4Wh',
+            r.center + const Offset(0, 4),
+            8,
+            Colors.white30,
+            centered: true,
+          );
+          _text(
+            c,
+            '+  Li  −',
+            r.center + const Offset(0, 34),
+            20,
+            Colors.white38,
+            centered: true,
+          );
+          _text(
+            c,
+            'TECHLIFE',
+            r.bottomCenter - const Offset(0, 30),
+            9,
+            color,
+            centered: true,
+            spacing: 1.5,
+          );
+        } else {
+          _text(c, 'Li-ion', r.center, 15, color, centered: true);
+        }
+        break;
+      case 'camera':
+        c.drawRRect(
+          RRect.fromRectAndRadius(r, const Radius.circular(13)),
+          Paint()
+            ..shader = const LinearGradient(
+              colors: [Color(0xFF6F7680), Color(0xFF202832)],
+            ).createShader(r),
+        );
+        for (final pos in [
+          Offset(r.left + r.width * .3, r.top + r.height * .32),
+          Offset(r.left + r.width * .7, r.top + r.height * .7),
+        ]) {
+          final radius = math.min(r.width, r.height) * .235;
+          c.drawCircle(
+            pos,
+            radius + 3,
+            Paint()..color = const Color(0xFFB0ADB3),
+          );
+          c.drawCircle(
+            pos,
+            radius,
+            Paint()
+              ..shader = const RadialGradient(
+                colors: [
+                  Color(0xFF245779),
+                  Color(0xFF070D16),
+                  Color(0xFF29455E),
+                ],
+              ).createShader(Rect.fromCircle(center: pos, radius: radius)),
+          );
+          c.drawCircle(
+            pos - Offset(radius * .3, radius * .3),
+            radius * .2,
+            Paint()..color = const Color(0xFF96CDDE).withValues(alpha: .7),
+          );
+        }
+        break;
+      case 'port':
+        final board = Rect.fromCenter(
+          center: r.center,
+          width: r.width,
+          height: math.min(30, r.height),
+        );
+        c.drawRRect(
+          RRect.fromRectAndRadius(board, const Radius.circular(5)),
+          Paint()..color = const Color(0xFFA0733D),
+        );
+        final port = Rect.fromCenter(
+          center: board.center,
+          width: board.width * .3,
+          height: board.height * .8,
+        );
+        c.drawRRect(
+          RRect.fromRectAndRadius(port, const Radius.circular(5)),
+          Paint()..color = const Color(0xFFB3B8BF),
+        );
+        c.drawRRect(
+          RRect.fromRectAndRadius(port.deflate(4), const Radius.circular(3)),
+          Paint()..color = const Color(0xFF101820),
+        );
+        for (var i = 0; i < 4; i++) {
+          c.drawCircle(
+            board.topLeft + Offset(9 + i * 13, board.height / 2),
+            3,
+            Paint()..color = const Color(0xFFE2C785),
+          );
+        }
+        break;
+    }
+  }
+
+  void _shield(Canvas c, Rect r) {
+    c.drawRRect(
+      RRect.fromRectAndRadius(r, const Radius.circular(5)),
+      Paint()
+        ..shader = const LinearGradient(
+          colors: [Color(0xFFB6BBC0), Color(0xFF646C76), Color(0xFFB7B8B9)],
+        ).createShader(r),
+    );
+    c.drawLine(
+      r.topLeft + const Offset(4, 10),
+      r.bottomRight - const Offset(4, 10),
+      Paint()
+        ..color = Colors.white24
+        ..strokeWidth = 1,
+    );
+  }
+
+  void _screw(Canvas c, Offset p, double scale, {int turns = 0}) {
+    c.save();
+    c.translate(p.dx, p.dy);
+    c.scale(scale);
+    c.rotate(turns * .6);
+    c.drawCircle(const Offset(1, 2), 7, Paint()..color = Colors.black87);
+    c.drawCircle(
+      Offset.zero,
+      6.5,
+      Paint()
+        ..shader = const RadialGradient(
+          colors: [Color(0xFFE1E3E4), Color(0xFF737D87), Color(0xFF353C44)],
+        ).createShader(const Rect.fromLTWH(-7, -7, 14, 14)),
+    );
+    final pnt =
+        Paint()
+          ..color = const Color(0xFF242A32)
+          ..strokeWidth = 1.8
+          ..strokeCap = StrokeCap.round;
+    c.drawLine(const Offset(-3, 0), const Offset(3, 0), pnt);
+    c.drawLine(const Offset(0, -3), const Offset(0, 3), pnt);
+    c.restore();
+  }
+
+  void _flex(Canvas c) {
+    final g = geometry;
+    final start = g.rect('part_connector', session).center;
+    final end = g.parkedDisplay.centerLeft + const Offset(12, 25);
+    final path =
+        Path()
+          ..moveTo(start.dx, start.dy)
+          ..cubicTo(
+            start.dx + 85,
+            start.dy + 95,
+            end.dx - 50,
+            end.dy + 75,
+            end.dx,
+            end.dy,
+          );
+    c.drawPath(
+      path,
+      Paint()
+        ..color = const Color(0xFF171C22)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 20,
+    );
+    c.drawPath(
+      path,
+      Paint()
+        ..color = const Color(0xFFB9783E)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 13,
+    );
+    c.drawPath(
+      path,
+      Paint()
+        ..color = const Color(0xFFDEAE6F)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
+  }
+
+  void _highlights(Canvas c) {
+    final step = session.current!;
+    final glow = .45 + .25 * math.sin(pulse * math.pi * 2);
+    for (final id in step.targets) {
+      if (session.targetDone(id) || dragTarget == id) continue;
+      final r = geometry.rect(id, session).inflate(7);
+      c.drawRRect(
+        RRect.fromRectAndRadius(r, const Radius.circular(14)),
+        Paint()..color = benchBlue.withValues(alpha: glow * .18),
+      );
+      c.drawRRect(
+        RRect.fromRectAndRadius(r, const Radius.circular(14)),
+        Paint()
+          ..color = benchBlue.withValues(alpha: glow + .25)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.5,
+      );
+      if (step.turns > 1) {
+        final dot = r.topCenter - const Offset(0, 20);
+        c.drawCircle(dot, 16, Paint()..color = benchInk);
+        _text(
+          c,
+          '${session.turnsFor(id)}/${step.turns}',
+          dot,
+          11,
+          benchBlue,
+          centered: true,
+        );
+      }
+    }
+    if (step.destination != null) {
+      final r = geometry.rect(step.destination!, session).inflate(12);
+      c.drawRRect(
+        RRect.fromRectAndRadius(r, const Radius.circular(20)),
+        Paint()
+          ..color = benchGreen.withValues(
+            alpha: dragTarget == null ? .04 : .15,
+          ),
+      );
+      c.drawRRect(
+        RRect.fromRectAndRadius(r, const Radius.circular(20)),
+        Paint()
+          ..color = benchGreen.withValues(alpha: .7)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2,
+      );
+      _text(
+        c,
+        '↓',
+        r.bottomCenter + const Offset(0, 20),
+        24,
+        benchGreen,
+        centered: true,
+      );
+    }
+  }
+
+  void _text(
+    Canvas c,
+    String text,
+    Offset p,
+    double size,
+    Color color, {
+    bool centered = false,
+    double? spacing,
+  }) {
+    final t = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          fontFamily: 'Roboto',
+          fontSize: size,
+          color: color,
+          fontWeight: FontWeight.w600,
+          letterSpacing: spacing,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    t.paint(c, centered ? p - Offset(t.width / 2, t.height / 2) : p);
+  }
+
+  @override
+  bool shouldRepaint(covariant WorkbenchPainter oldDelegate) => true;
+}

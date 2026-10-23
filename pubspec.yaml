@@ -1,10 +1,11 @@
 name: techlife
 description: TechLife - simulator of device repair, trading and resale.
 publish_to: none
-version: 0.3.0+3
+version: 0.4.0+4
 
 environment:
-  sdk: ">=3.3.0 <4.0.0"
+  sdk: ">=3.7.0 <4.0.0"
+  flutter: ">=3.29.0"
 
 dependencies:
   flutter:
@@ -27,7 +28,14 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  fonts:
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/Roboto-Regular.ttf
+        - asset: assets/fonts/Roboto-Bold.ttf
+          weight: 700
   assets:
+    - assets/repair/workshop.jpg
     - assets/icon/icon.png
     - assets/geo/countries.txt
     - assets/geo/places.txt

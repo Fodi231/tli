@@ -63,6 +63,26 @@ class Order {
     required this.lng,
     this.status = 'available',
   });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'device': device,
+    'service': service,
+    'price': price,
+    'lat': lat,
+    'lng': lng,
+    'status': status,
+  };
+
+  factory Order.fromJson(Map<String, dynamic> j) => Order(
+    id: j['id'] as String,
+    device: j['device'] as String,
+    service: j['service'] as String,
+    price: (j['price'] as num).toDouble(),
+    lat: (j['lat'] as num).toDouble(),
+    lng: (j['lng'] as num).toDouble(),
+    status: j['status'] as String? ?? 'available',
+  );
 }
 
 class StockItem {
@@ -70,9 +90,18 @@ class StockItem {
   final double cost, market;
   StockItem(this.id, this.name, this.cost, this.market);
 
-  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'cost': cost, 'market': market};
-  factory StockItem.fromJson(Map<String, dynamic> j) =>
-      StockItem(j['id'], j['name'], (j['cost'] as num).toDouble(), (j['market'] as num).toDouble());
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'cost': cost,
+    'market': market,
+  };
+  factory StockItem.fromJson(Map<String, dynamic> j) => StockItem(
+    j['id'],
+    j['name'],
+    (j['cost'] as num).toDouble(),
+    (j['market'] as num).toDouble(),
+  );
 }
 
 class ChatMsg {
@@ -115,7 +144,14 @@ class Txn {
   final DateTime time;
   Txn(this.title, this.amount, [DateTime? t]) : time = t ?? DateTime.now();
 
-  Map<String, dynamic> toJson() => {'t': title, 'a': amount, 'ts': time.millisecondsSinceEpoch};
-  factory Txn.fromJson(Map<String, dynamic> j) =>
-      Txn(j['t'], (j['a'] as num).toDouble(), DateTime.fromMillisecondsSinceEpoch(j['ts']));
+  Map<String, dynamic> toJson() => {
+    't': title,
+    'a': amount,
+    'ts': time.millisecondsSinceEpoch,
+  };
+  factory Txn.fromJson(Map<String, dynamic> j) => Txn(
+    j['t'],
+    (j['a'] as num).toDouble(),
+    DateTime.fromMillisecondsSinceEpoch(j['ts']),
+  );
 }

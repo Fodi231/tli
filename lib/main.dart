@@ -26,27 +26,29 @@ Future<void> main() async {
 
   // On phones the game draws its own clock/battery, so hide the system bars
   // (status bar on iOS and Android, navigation buttons on Android).
-  final isPhone = !kIsWeb &&
-      (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
+  final isPhone =
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
   if (isPhone) {
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    // Phones stay in portrait, tablets (shortest side >= 600 dp) may rotate.
-    final view = WidgetsBinding.instance.platformDispatcher.views.first;
-    final shortest = view.physicalSize.shortestSide / view.devicePixelRatio;
-    await SystemChrome.setPreferredOrientations(shortest >= 600
-        ? [
-            DeviceOrientation.portraitUp,
-            DeviceOrientation.portraitDown,
-            DeviceOrientation.landscapeLeft,
-            DeviceOrientation.landscapeRight,
-          ]
-        : [DeviceOrientation.portraitUp]);
+    // The repair bench supports both portrait and landscape on phones too.
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
   }
 
   final gs = GameState();
   await gs.init();
   // Desktop: window title, size and full screen from the saved settings.
-  await WinService.init(w: gs.winW, h: gs.winH, fullscreen: gs.fullscreen, title: kAppName);
+  await WinService.init(
+    w: gs.winW,
+    h: gs.winH,
+    fullscreen: gs.fullscreen,
+    title: kAppName,
+  );
   AppLog.I.info('app', 'запуск $kAppName $kAppVersion');
   runApp(
     MultiProvider(
@@ -93,7 +95,9 @@ class _TechLifeAppState extends State<TechLifeApp> with WidgetsBindingObserver {
       debugShowCheckedModeBanner: false,
       theme: buildTheme(),
       builder: (context, child) {
-        final mq = MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale));
+        final mq = MediaQuery.of(
+          context,
+        ).copyWith(textScaler: TextScaler.linear(scale));
         Widget app = child!;
         if ((ui - 1.0).abs() > 0.01) {
           // Interface scale: lay out in a smaller virtual window and magnify it.
@@ -112,7 +116,10 @@ class _TechLifeAppState extends State<TechLifeApp> with WidgetsBindingObserver {
                 child: SizedBox(
                   width: vw,
                   height: vh,
-                  child: MediaQuery(data: mq.copyWith(size: Size(vw, vh)), child: app),
+                  child: MediaQuery(
+                    data: mq.copyWith(size: Size(vw, vh)),
+                    child: app,
+                  ),
                 ),
               ),
             ),

@@ -20,12 +20,14 @@ class _ShopAppState extends State<ShopApp> {
   @override
   Widget build(BuildContext context) {
     final gs = context.watch<GameState>();
-    final list = products.where((p) {
-      if (cat != 'all' && p.cat != cat) return false;
-      if (query.isEmpty) return true;
-      final q = query.toLowerCase();
-      return p.device.toLowerCase().contains(q) || 'part_${p.cat}'.tr.toLowerCase().contains(q);
-    }).toList();
+    final list =
+        products.where((p) {
+          if (cat != 'all' && p.cat != cat) return false;
+          if (query.isEmpty) return true;
+          final q = query.toLowerCase();
+          return p.device.toLowerCase().contains(q) ||
+              'part_${p.cat}'.tr.toLowerCase().contains(q);
+        }).toList();
     return AppPage(
       title: 'shop'.tr,
       child: Column(
@@ -37,13 +39,16 @@ class _ShopAppState extends State<ShopApp> {
               hintText: 'search_parts'.tr,
               filled: true,
               fillColor: C.card,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide.none,
+              ),
               isDense: true,
             ),
           ),
           const SizedBox(height: 8),
           ChipRow(
-            ids: ['all', ...categories],
+            ids: const ['all', ...categories],
             selected: cat,
             label: (id) => id == 'all' ? 'all'.tr : 'cat_$id'.tr,
             onSelect: (id) => setState(() => cat = id),
@@ -62,7 +67,10 @@ class _ShopAppState extends State<ShopApp> {
                       Container(
                         width: 48,
                         height: 48,
-                        decoration: BoxDecoration(color: C.card2, borderRadius: BorderRadius.circular(12)),
+                        decoration: BoxDecoration(
+                          color: C.card2,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         child: Icon(serviceIcon(p.cat), color: C.accent),
                       ),
                       const SizedBox(width: 12),
@@ -70,28 +78,68 @@ class _ShopAppState extends State<ShopApp> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('part_${p.cat}'.tr, style: const TextStyle(fontWeight: FontWeight.w600)),
-                            Text('${'for_device'.tr} ${p.device}', style: const TextStyle(color: C.sub, fontSize: 12)),
-                            Row(children: [
-                              Text(money(p.price), style: const TextStyle(color: C.green, fontWeight: FontWeight.w700)),
-                              const SizedBox(width: 8),
-                              const Icon(Icons.star, size: 14, color: C.orange),
-                              Text(p.rating.toString(), style: const TextStyle(fontSize: 12)),
-                            ]),
+                            Text(
+                              'part_${p.cat}'.tr,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              '${'for_device'.tr} ${p.device}',
+                              style: const TextStyle(
+                                color: C.sub,
+                                fontSize: 12,
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                Text(
+                                  money(p.price),
+                                  style: const TextStyle(
+                                    color: C.green,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                const Icon(
+                                  Icons.star,
+                                  size: 14,
+                                  color: C.orange,
+                                ),
+                                Text(
+                                  p.rating.toString(),
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ),
                       Column(
                         children: [
                           FilledButton(
-                            style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
+                            style: FilledButton.styleFrom(
+                              visualDensity: VisualDensity.compact,
+                            ),
                             onPressed: () {
                               final ok = context.read<GameState>().buyPart(p);
-                              toast(context, ok ? '${'bought'.tr}: ${'part_${p.cat}'.tr}' : 'no_money'.tr);
+                              toast(
+                                context,
+                                ok
+                                    ? '${'bought'.tr}: ${'part_${p.cat}'.tr}'
+                                    : 'no_money'.tr,
+                              );
                             },
                             child: Text('buy'.tr),
                           ),
-                          if (have > 0) Text('x$have', style: const TextStyle(color: C.sub, fontSize: 11)),
+                          if (have > 0)
+                            Text(
+                              'x$have',
+                              style: const TextStyle(
+                                color: C.sub,
+                                fontSize: 11,
+                              ),
+                            ),
                         ],
                       ),
                     ],

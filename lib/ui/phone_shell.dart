@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../core/game_state.dart';
 import '../core/i18n.dart';
 import '../core/theme.dart';
+import '../core/repair/repair_session.dart';
 import 'apps/achievements_app.dart';
 import 'apps/bank_app.dart';
 import 'apps/learning_app.dart';
@@ -35,36 +36,53 @@ class PhoneShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gs = context.watch<GameState>();
-    return LayoutBuilder(builder: (context, c) {
-      final tablet = useTabletLayout(gs, c.maxWidth);
-      final framed = !tablet && c.maxWidth > 600;
-      return Scaffold(
-        backgroundColor: framed ? const Color(0xFF05070D) : C.bg,
-        body: framed
-            ? Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 440),
-                    child: AspectRatio(
-                      aspectRatio: 9 / 19.5,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(42),
-                          border: Border.all(color: Colors.white24, width: 5),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(36),
-                          child: const PhoneScreen(),
+    final sh = context.watch<Shell>();
+    // A workbench is a game scene, so it uses the whole display even when
+    // the player chose a framed phone layout for the in-game applications.
+    if (sh.app == 'repair' && sh.arg is String) {
+      final id = sh.arg as String;
+      final matching = gs.orders.where((o) => o.id == id);
+      if (id == RepairSession.practiceId ||
+          (matching.isNotEmpty && supportsWorkbench(matching.first.device))) {
+        return Scaffold(body: RepairApp(key: ValueKey(id), orderId: id));
+      }
+    }
+    return LayoutBuilder(
+      builder: (context, c) {
+        final tablet = useTabletLayout(gs, c.maxWidth);
+        final framed = !tablet && c.maxWidth > 600;
+        return Scaffold(
+          backgroundColor: framed ? const Color(0xFF05070D) : C.bg,
+          body:
+              framed
+                  ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 440),
+                        child: AspectRatio(
+                          aspectRatio: 9 / 19.5,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(42),
+                              border: Border.all(
+                                color: Colors.white24,
+                                width: 5,
+                              ),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(36),
+                              child: const PhoneScreen(),
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-              )
-            : const PhoneScreen(),
-      );
-    });
+                  )
+                  : const PhoneScreen(),
+        );
+      },
+    );
   }
 }
 
@@ -75,7 +93,10 @@ class PhoneScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final gs = context.watch<GameState>();
     final sh = context.watch<Shell>();
-    final light = isLightMode(gs.themeMode, MediaQuery.platformBrightnessOf(context));
+    final light = isLightMode(
+      gs.themeMode,
+      MediaQuery.platformBrightnessOf(context),
+    );
     Widget body;
     String key;
     if (!sh.unlocked) {
@@ -87,32 +108,41 @@ class PhoneScreen extends StatelessWidget {
     } else {
       // Apps are drawn dark; the light theme inverts them (the wallpaper,
       // lock screen and home screen are not affected).
-      body = ThemeFilter(light: light, child: AppHost(id: sh.app!, arg: sh.arg));
+      body = ThemeFilter(
+        light: light,
+        child: AppHost(id: sh.app!, arg: sh.arg),
+      );
       key = 'app_${sh.app}_${sh.arg}_$light';
     }
-    return LayoutBuilder(builder: (context, c) {
-      Shell.phoneSize = Size(c.maxWidth, c.maxHeight);
-      return Stack(
-        children: [
-          Positioned.fill(child: Aurora(lock: !sh.unlocked)),
-          Column(
-            children: [
-              const StatusBar(),
-              Expanded(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 280),
-                  transitionBuilder: (child, anim) => FadeTransition(
-                    opacity: anim,
-                    child: ScaleTransition(scale: Tween(begin: 0.92, end: 1.0).animate(anim), child: child),
+    return LayoutBuilder(
+      builder: (context, c) {
+        Shell.phoneSize = Size(c.maxWidth, c.maxHeight);
+        return Stack(
+          children: [
+            Positioned.fill(child: Aurora(lock: !sh.unlocked)),
+            Column(
+              children: [
+                const StatusBar(),
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 280),
+                    transitionBuilder:
+                        (child, anim) => FadeTransition(
+                          opacity: anim,
+                          child: ScaleTransition(
+                            scale: Tween(begin: 0.92, end: 1.0).animate(anim),
+                            child: child,
+                          ),
+                        ),
+                    child: KeyedSubtree(key: ValueKey(key), child: body),
                   ),
-                  child: KeyedSubtree(key: ValueKey(key), child: body),
                 ),
-              ),
-            ],
-          ),
-        ],
-      );
-    });
+              ],
+            ),
+          ],
+        );
+      },
+    );
   }
 }
 
@@ -124,7 +154,10 @@ class Aurora extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gs = context.watch<GameState>();
-    return WallpaperView(cfg: lock ? gs.lockCfg : gs.homeWp, dim: gs.wallpaperDim);
+    return WallpaperView(
+      cfg: lock ? gs.lockCfg : gs.homeWp,
+      dim: gs.wallpaperDim,
+    );
   }
 }
 
@@ -152,7 +185,8 @@ class _ClockTextState extends State<ClockText> {
   @override
   Widget build(BuildContext context) {
     final n = DateTime.now();
-    final s = '${n.hour.toString().padLeft(2, '0')}:${n.minute.toString().padLeft(2, '0')}';
+    final s =
+        '${n.hour.toString().padLeft(2, '0')}:${n.minute.toString().padLeft(2, '0')}';
     return Text(s, style: widget.style);
   }
 }
@@ -164,10 +198,17 @@ class StatusBar extends StatelessWidget {
     final gs = context.watch<GameState>();
     final sh = context.watch<Shell>();
     return Padding(
-      padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 10, 16, 4),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        MediaQuery.of(context).padding.top + 10,
+        16,
+        4,
+      ),
       child: Row(
         children: [
-          const ClockText(style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+          const ClockText(
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+          ),
           const Spacer(),
           if (sh.unlocked)
             GestureDetector(
@@ -182,15 +223,28 @@ class StatusBar extends StatelessWidget {
                       top: -4,
                       child: Container(
                         padding: const EdgeInsets.all(3),
-                        decoration: const BoxDecoration(color: C.red, shape: BoxShape.circle),
-                        child: Text('${gs.unreadCount}', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
+                        decoration: const BoxDecoration(
+                          color: C.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          '${gs.unreadCount}',
+                          style: const TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
                 ],
               ),
             ),
           const SizedBox(width: 10),
-          Icon(gs.online ? Icons.wifi : Icons.wifi_off, size: 16, color: gs.online ? null : C.red),
+          Icon(
+            gs.online ? Icons.wifi : Icons.wifi_off,
+            size: 16,
+            color: gs.online ? null : C.red,
+          ),
           const SizedBox(width: 6),
           const Icon(Icons.battery_full, size: 18),
         ],
@@ -219,7 +273,9 @@ class LockScreen extends StatelessWidget {
         child: Column(
           children: [
             SizedBox(height: MediaQuery.sizeOf(context).width >= 700 ? 80 : 40),
-            const ClockText(style: TextStyle(fontSize: 76, fontWeight: FontWeight.w300)),
+            const ClockText(
+              style: TextStyle(fontSize: 76, fontWeight: FontWeight.w300),
+            ),
             Text(date, style: const TextStyle(fontSize: 18, color: C.sub)),
             const SizedBox(height: 28),
             ConstrainedBox(
@@ -229,14 +285,29 @@ class LockScreen extends StatelessWidget {
                   children: [
                     const Icon(Icons.cloud, size: 36, color: C.sub),
                     const SizedBox(width: 12),
-                    Expanded(child: Text(gs.city.name(gs.lang), style: const TextStyle(fontSize: 16))),
-                    Text(gs.city.temp, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600)),
+                    Expanded(
+                      child: Text(
+                        gs.city.name(gs.lang),
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                    ),
+                    Text(
+                      gs.city.temp,
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
             const Spacer(),
-            Text('tagline'.tr, textAlign: TextAlign.center, style: const TextStyle(color: C.sub, fontSize: 12)),
+            Text(
+              'tagline'.tr,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: C.sub, fontSize: 12),
+            ),
             const SizedBox(height: 16),
             Text('swipe'.tr, style: const TextStyle(color: C.text)),
             const Icon(Icons.keyboard_arrow_up, color: C.text),
@@ -287,76 +358,108 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gs = context.watch<GameState>();
-    return LayoutBuilder(builder: (context, box) {
-      final w = box.maxWidth;
-      final wide = w >= 700;
-      // 4 columns on a phone, more on a tablet / PC window.
-      final cols = wide ? (w / 150).floor().clamp(5, 8).toInt() : 4;
-      final content = Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Panel(
-                  onTap: () => context.read<Shell>().open('bank'),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('balance'.tr, style: const TextStyle(color: C.sub, fontSize: 12)),
-                      Text(money(gs.balance), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
-                    ],
+    return LayoutBuilder(
+      builder: (context, box) {
+        final w = box.maxWidth;
+        final wide = w >= 700;
+        // 4 columns on a phone, more on a tablet / PC window.
+        final cols = wide ? (w / 150).floor().clamp(5, 8).toInt() : 4;
+        final content = Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Panel(
+                    onTap: () => context.read<Shell>().open('bank'),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'balance'.tr,
+                          style: const TextStyle(color: C.sub, fontSize: 12),
+                        ),
+                        Text(
+                          money(gs.balance),
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Panel(
-                  onTap: () => context.read<Shell>().open('stats'),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('reputation'.tr, style: const TextStyle(color: C.sub, fontSize: 12)),
-                      Row(children: [
-                        const Icon(Icons.star, color: C.orange, size: 20),
-                        const SizedBox(width: 4),
-                        Text(gs.reputation.toStringAsFixed(1), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
-                      ]),
-                      const SizedBox(height: 4),
-                      LinearProgressIndicator(value: gs.reputation / 5, color: C.green, backgroundColor: Colors.white12),
-                    ],
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Panel(
+                    onTap: () => context.read<Shell>().open('stats'),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'reputation'.tr,
+                          style: const TextStyle(color: C.sub, fontSize: 12),
+                        ),
+                        Row(
+                          children: [
+                            const Icon(Icons.star, color: C.orange, size: 20),
+                            const SizedBox(width: 4),
+                            Text(
+                              gs.reputation.toStringAsFixed(1),
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        LinearProgressIndicator(
+                          value: gs.reputation / 5,
+                          color: C.green,
+                          backgroundColor: Colors.white12,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Expanded(
+              child: GridView.count(
+                crossAxisCount: cols,
+                childAspectRatio: wide ? 1.0 : 0.78,
+                physics: const BouncingScrollPhysics(),
+                children: [for (final a in homeApps) AppIcon(a)],
               ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Expanded(
-            child: GridView.count(
-              crossAxisCount: cols,
-              childAspectRatio: wide ? 1.0 : 0.78,
-              physics: const BouncingScrollPhysics(),
-              children: [for (final a in homeApps) AppIcon(a)],
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              margin: const EdgeInsets.only(bottom: 14),
+              decoration: BoxDecoration(
+                color: Colors.white10,
+                borderRadius: BorderRadius.circular(26),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [for (final a in dockApps) AppIcon(a, label: false)],
+              ),
+            ),
+          ],
+        );
+        return Padding(
+          padding: EdgeInsets.symmetric(horizontal: wide ? 24 : 14),
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1100),
+              child: content,
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            margin: const EdgeInsets.only(bottom: 14),
-            decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(26)),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [for (final a in dockApps) AppIcon(a, label: false)],
-            ),
-          ),
-        ],
-      );
-      return Padding(
-        padding: EdgeInsets.symmetric(horizontal: wide ? 24 : 14),
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 1100), child: content),
-        ),
-      );
-    });
+        );
+      },
+    );
   }
 }
 
@@ -386,7 +489,10 @@ class AppIcon extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [app.color, Color.lerp(app.color, Colors.black, 0.35)!],
+                    colors: [
+                      app.color,
+                      Color.lerp(app.color, Colors.black, 0.35)!,
+                    ],
                   ),
                 ),
                 child: Icon(app.icon, color: Colors.white, size: 28),
@@ -397,15 +503,29 @@ class AppIcon extends StatelessWidget {
                   top: -5,
                   child: Container(
                     padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(color: C.red, shape: BoxShape.circle),
-                    child: Text('$badge', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    decoration: const BoxDecoration(
+                      color: C.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '$badge',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
             ],
           ),
           if (label) ...[
             const SizedBox(height: 6),
-            Text(app.id.tr, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11)),
+            Text(
+              app.id.tr,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 11),
+            ),
           ],
         ],
       ),

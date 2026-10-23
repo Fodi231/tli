@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
-import 'dart:typed_data';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
@@ -13,6 +12,7 @@ import 'app_log.dart';
 import 'catalog.dart';
 import 'i18n.dart';
 import 'models.dart';
+import 'repair/repair_session.dart';
 import 'wallpaper_cfg.dart';
 import 'window_service.dart';
 
@@ -35,6 +35,7 @@ class GameState extends ChangeNotifier {
   int completedOrders = 0;
   double totalEarned = 0;
   List<Order> orders = [];
+  final Map<String, RepairSession> repairs = {};
   List<StockItem> stock = [];
   List<Deal> deals = [];
   List<AppNotification> notifications = [];
@@ -82,7 +83,11 @@ class GameState extends ChangeNotifier {
   int get certCount => courseProgress.values.where((v) => v >= 1).length;
   bool hasCert(String id) => (courseProgress[id] ?? 0) >= 1;
   double get netWorth =>
-      balance + invested + stock.fold(0.0, (s, e) => s + e.market) - loan - taxDue;
+      balance +
+      invested +
+      stock.fold(0.0, (s, e) => s + e.market) -
+      loan -
+      taxDue;
 
   String nextId() => '${DateTime.now().microsecondsSinceEpoch}_${_idSeq++}';
 
@@ -106,7 +111,9 @@ class GameState extends ChangeNotifier {
     _seedWorld();
     try {
       final c = Connectivity();
-      _netOnline = (await c.checkConnectivity()).any((r) => r != ConnectivityResult.none);
+      _netOnline = (await c.checkConnectivity()).any(
+        (r) => r != ConnectivityResult.none,
+      );
       AppLog.I.info('net', _netOnline ? 'онлайн' : 'нет сети');
       _connSub = c.onConnectivityChanged.listen((list) {
         final v = list.any((r) => r != ConnectivityResult.none);
@@ -169,24 +176,64 @@ class GameState extends ChangeNotifier {
     lang = (j['lang'] as String?) ?? 'ru';
     geminiKey = (j['key'] as String?) ?? '';
     parts = Map<String, int>.from((j['parts'] as Map?) ?? {});
-    courseProgress = ((j['courses'] as Map?) ?? {})
-        .map((k, v) => MapEntry(k as String, (v as num).toDouble()));
+    courseProgress = ((j['courses'] as Map?) ?? {}).map(
+      (k, v) => MapEntry(k as String, (v as num).toDouble()),
+    );
     loan = (j['loan'] as num? ?? 0).toDouble();
     invested = (j['invested'] as num? ?? 0).toDouble();
     taxDue = (j['tax'] as num? ?? 0).toDouble();
     insured = (j['insured'] as bool?) ?? false;
     completedOrders = (j['completed'] as int?) ?? 0;
     totalEarned = (j['earned'] as num? ?? 0).toDouble();
-    stock = ((j['stock'] as List?) ?? [])
-        .map((e) => StockItem.fromJson(Map<String, dynamic>.from(e as Map)))
-        .toList();
-    txns = ((j['txns'] as List?) ?? [])
-        .map((e) => Txn.fromJson(Map<String, dynamic>.from(e as Map)))
-        .toList();
+    // Older saves have neither of these fields and migrate without a reset.
+    orders = [];
+    for (final item in (j['orders'] as List? ?? [])) {
+      try {
+        final order = Order.fromJson(Map<String, dynamic>.from(item as Map));
+        if (services.containsKey(order.service) &&
+            const ['available', 'active', 'done'].contains(order.status) &&
+            !orders.any((o) => o.id == order.id)) {
+          orders.add(order);
+        }
+      } catch (_) {
+        /* Skip an invalid record, keep the rest of the save. */
+      }
+    }
+    repairs.clear();
+    for (final item in (j['repairs'] as List? ?? [])) {
+      try {
+        final session = RepairSession.fromJson(
+          Map<String, dynamic>.from(item as Map),
+        );
+        final order = orders.where((o) => o.id == session.orderId);
+        if ((session.training && session.orderId == RepairSession.practiceId) ||
+            (order.isNotEmpty && order.first.service == session.service)) {
+          repairs[session.orderId] = session;
+        }
+      } catch (_) {
+        /* A bad session must not erase money or inventory. */
+      }
+    }
+    stock =
+        ((j['stock'] as List?) ?? [])
+            .map((e) => StockItem.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList();
+    txns =
+        ((j['txns'] as List?) ?? [])
+            .map((e) => Txn.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList();
     playerName = (j['pname'] as String?) ?? '';
     themeMode = ((j['theme'] as int?) ?? 2).clamp(0, 2).toInt();
-    homeWp.loadJson(j['wpHome'] == null ? null : Map<String, dynamic>.from(j['wpHome'] as Map));
-    lockWp.loadJson(j['wpLock'] == null ? null : Map<String, dynamic>.from(j['wpLock'] as Map));
+    homeWp.loadJson(
+      j['wpHome'] == null
+          ? null
+          : Map<String, dynamic>.from(j['wpHome'] as Map),
+    );
+    lockWp.loadJson(
+      j['wpLock'] == null
+          ? null
+          : Map<String, dynamic>.from(j['wpLock'] as Map),
+    );
     lockSeparate = (j['lockSep'] as bool?) ?? false;
     wallpaperDim = (j['wpdim'] as num? ?? 0).toDouble();
     textScale = (j['tscale'] as num? ?? 1.0).toDouble();
@@ -222,51 +269,54 @@ class GameState extends ChangeNotifier {
   }
 
   Map<String, dynamic> _toJson() => {
-        'balance': balance,
-        'rep': reputation,
-        'city': cityIndex,
-        'lang': lang,
-        'key': geminiKey,
-        'parts': parts,
-        'courses': courseProgress,
-        'loan': loan,
-        'invested': invested,
-        'tax': taxDue,
-        'insured': insured,
-        'completed': completedOrders,
-        'earned': totalEarned,
-        'stock': stock.map((e) => e.toJson()).toList(),
-        'txns': txns.take(40).map((e) => e.toJson()).toList(),
-        'pname': playerName,
-        'theme': themeMode,
-        'wpHome': homeWp.toJson(),
-        'wpLock': lockWp.toJson(),
-        'lockSep': lockSeparate,
-        'wpdim': wallpaperDim,
-        'tscale': textScale,
-        'haptics': haptics,
-        'nord': notifOrders,
-        'ndeal': notifDeals,
-        'aiModel': aiModel,
-        'aiUrl': aiCustomUrl,
-        'aiCKey': aiCustomKey,
-        'aiCModel': aiCustomModel,
-        'layout': layoutMode,
-        'uiScale': uiScalePct,
-        'fullscreen': fullscreen,
-        'winW': winW,
-        'winH': winH,
-        'mapStyle': mapStyle,
-        'cCity': customCity == null
+    'balance': balance,
+    'rep': reputation,
+    'city': cityIndex,
+    'lang': lang,
+    'key': geminiKey,
+    'parts': parts,
+    'courses': courseProgress,
+    'loan': loan,
+    'invested': invested,
+    'tax': taxDue,
+    'insured': insured,
+    'completed': completedOrders,
+    'earned': totalEarned,
+    'orders': orders.map((o) => o.toJson()).toList(),
+    'repairs': repairs.values.map((r) => r.toJson()).toList(),
+    'stock': stock.map((e) => e.toJson()).toList(),
+    'txns': txns.take(40).map((e) => e.toJson()).toList(),
+    'pname': playerName,
+    'theme': themeMode,
+    'wpHome': homeWp.toJson(),
+    'wpLock': lockWp.toJson(),
+    'lockSep': lockSeparate,
+    'wpdim': wallpaperDim,
+    'tscale': textScale,
+    'haptics': haptics,
+    'nord': notifOrders,
+    'ndeal': notifDeals,
+    'aiModel': aiModel,
+    'aiUrl': aiCustomUrl,
+    'aiCKey': aiCustomKey,
+    'aiCModel': aiCustomModel,
+    'layout': layoutMode,
+    'uiScale': uiScalePct,
+    'fullscreen': fullscreen,
+    'winW': winW,
+    'winH': winH,
+    'mapStyle': mapStyle,
+    'cCity':
+        customCity == null
             ? null
             : {
-                'id': customCity!.id,
-                'n': customCity!.names,
-                'lat': customCity!.lat,
-                'lng': customCity!.lng,
-                't': customCity!.temp,
-              },
-      };
+              'id': customCity!.id,
+              'n': customCity!.names,
+              'lat': customCity!.lat,
+              'lng': customCity!.lng,
+              't': customCity!.temp,
+            },
+  };
 
   void _save() {
     final p = _prefs;
@@ -292,6 +342,7 @@ class GameState extends ChangeNotifier {
     completedOrders = 0;
     totalEarned = 0;
     orders = [];
+    repairs.clear();
     stock = [];
     deals = [];
     notifications = [];
@@ -342,7 +393,15 @@ class GameState extends ChangeNotifier {
     _changed();
   }
 
-  void setWallpaperImage(Uint8List bytes, int iw, int ih, double scale, double ox, double oy, {bool lock = false}) {
+  void setWallpaperImage(
+    Uint8List bytes,
+    int iw,
+    int ih,
+    double scale,
+    double ox,
+    double oy, {
+    bool lock = false,
+  }) {
     final c = _cfg(lock);
     c.bytes = bytes;
     c.iw = iw;
@@ -354,7 +413,12 @@ class GameState extends ChangeNotifier {
     _changed();
   }
 
-  void setWallpaperTransform(double scale, double ox, double oy, {bool lock = false}) {
+  void setWallpaperTransform(
+    double scale,
+    double ox,
+    double oy, {
+    bool lock = false,
+  }) {
     final c = _cfg(lock);
     c.scale = scale;
     c.ox = ox;
@@ -423,7 +487,8 @@ class GameState extends ChangeNotifier {
 
   // ---------------------------------------------------------------- tick
   void _tick() {
-    if (orders.where((o) => o.status == 'available').length < 6 && _rng.nextDouble() < 0.6) {
+    if (orders.where((o) => o.status == 'available').length < 6 &&
+        _rng.nextDouble() < 0.6) {
       _spawnOrder();
     }
     if (openDeals < 4 && _rng.nextDouble() < 0.3) {
@@ -441,15 +506,19 @@ class GameState extends ChangeNotifier {
     final price = (s.min + _rng.nextInt(s.max - s.min + 1)).toDouble();
     final dev = devices[_rng.nextInt(devices.length)];
     final c = city;
-    orders.add(Order(
-      id: nextId(),
-      device: dev,
-      service: k,
-      price: price,
-      lat: c.lat + (_rng.nextDouble() - 0.5) * 0.08,
-      lng: c.lng + (_rng.nextDouble() - 0.5) * 0.1,
-    ));
-    if (!silent && notifOrders) _note('order', 'n_order', '${s.nameKey.tr} · $dev');
+    orders.add(
+      Order(
+        id: nextId(),
+        device: dev,
+        service: k,
+        price: price,
+        lat: c.lat + (_rng.nextDouble() - 0.5) * 0.08,
+        lng: c.lng + (_rng.nextDouble() - 0.5) * 0.1,
+      ),
+    );
+    if (!silent && notifOrders) {
+      _note('order', 'n_order', '${s.nameKey.tr} · $dev');
+    }
   }
 
   // -------------------------------------------------------------- orders
@@ -457,20 +526,32 @@ class GameState extends ChangeNotifier {
       const Distance().as(LengthUnit.Kilometer, player, LatLng(lat, lng));
 
   void acceptOrder(Order o) {
+    if (!orders.contains(o) || o.status != 'available') return;
     o.status = 'active';
     _changed();
   }
 
   bool hasPartFor(Order o) {
+    if (repairs[o.id]?.partConsumed == true) return true;
     final cat = services[o.service]!.cat;
     return cat == null || (parts[cat] ?? 0) > 0;
   }
 
   /// Returns the reward that was paid.
   double completeRepair(Order o, int mistakes) {
+    if (!orders.contains(o)) return 0;
+    final session = repairs[o.id];
+    if (o.status != 'active') return session?.reward ?? 0;
+    if (supportsWorkbench(o.device) && (session == null || !session.finished)) {
+      return 0;
+    }
     final s = services[o.service]!;
-    if (s.cat != null) parts[s.cat!] = max(0, (parts[s.cat!] ?? 0) - 1);
-    final f = (1 - 0.12 * mistakes * (insured ? 0.5 : 1)).clamp(0.4, 1.0).toDouble();
+    if (s.cat != null && session?.partConsumed != true) {
+      if ((parts[s.cat!] ?? 0) <= 0) return 0;
+      parts[s.cat!] = parts[s.cat!]! - 1;
+    }
+    final f =
+        (1 - 0.12 * mistakes * (insured ? 0.5 : 1)).clamp(0.4, 1.0).toDouble();
     var reward = o.price * f * (1 + 0.05 * certCount);
     reward = reward.roundToDouble();
     o.status = 'done';
@@ -478,10 +559,100 @@ class GameState extends ChangeNotifier {
     final delta = mistakes == 0 ? 0.04 : (mistakes > 3 ? -0.08 : -0.01);
     reputation = (reputation + delta).clamp(1.0, 5.0).toDouble();
     _income(s.nameKey.tr, reward);
+    if (session != null) session.reward = reward;
     _note('money', 'n_pay', '+\$${reward.toInt()}');
-    AppLog.I.info('game', 'ремонт ${o.service} завершён, ошибок: $mistakes, награда: \$${reward.toInt()}');
+    AppLog.I.info(
+      'game',
+      'ремонт ${o.service} завершён, ошибок: $mistakes, награда: \$${reward.toInt()}',
+    );
     _changed();
     return reward;
+  }
+
+  /// Called on entry, outside build; sessions survive navigation and restart.
+  RepairSession? startWorkbench(String id) {
+    if (id == RepairSession.practiceId) {
+      return repairs.putIfAbsent(
+        id,
+        () => RepairSession(id, 'display', training: true),
+      );
+    }
+    for (final order in orders) {
+      if (order.id == id &&
+          supportsWorkbench(order.device) &&
+          (order.status == 'active' || order.status == 'done')) {
+        return repairs.putIfAbsent(id, () => RepairSession(id, order.service));
+      }
+    }
+    return null;
+  }
+
+  void selectRepairTool(String id, RepairTool tool) {
+    final session = repairs[id];
+    if (session == null) return;
+    session.tool = tool;
+    _changed();
+  }
+
+  void toggleRepairHints(String id) {
+    final session = repairs[id];
+    if (session == null) return;
+    session.hints = !session.hints;
+    _changed();
+  }
+
+  void resetPractice() {
+    repairs[RepairSession.practiceId] = RepairSession(
+      RepairSession.practiceId,
+      'display',
+      training: true,
+    );
+    _changed();
+  }
+
+  RepairResult repairAction(
+    String id,
+    String target,
+    RepairGesture gesture, {
+    String? destination,
+    int heldMs = 0,
+  }) {
+    final session = repairs[id];
+    if (session == null) {
+      return const RepairResult(RepairOutcome.blocked, 'no_orders');
+    }
+    final matching = orders.where((o) => o.id == id);
+    final order = matching.isEmpty ? null : matching.first;
+    if (!session.training && (order == null || order.status != 'active')) {
+      return const RepairResult(RepairOutcome.blocked, 'r_already_done');
+    }
+    final previous = session.current?.id;
+    final cat = services[session.service]!.cat;
+    final result = session.act(
+      target,
+      gesture,
+      destination: destination,
+      heldMs: heldMs,
+      hasPart: cat == null || (parts[cat] ?? 0) > 0,
+    );
+    if (result.accepted &&
+        previous == 'part_in' &&
+        session.done('part_in') &&
+        !session.training &&
+        !session.partConsumed &&
+        cat != null) {
+      parts[cat] = parts[cat]! - 1;
+      session.partConsumed = true;
+    }
+    if (result.accepted && session.finished) {
+      if (session.training) {
+        session.reward = 0;
+      } else {
+        completeRepair(order!, session.mistakes);
+      }
+    }
+    _changed();
+    return result;
   }
 
   // ---------------------------------------------------------------- shop
@@ -507,7 +678,11 @@ class GameState extends ChangeNotifier {
 
   /// Ticket price to a point: grows with distance.
   int flightCost(double lat, double lng) {
-    final km = const Distance().as(LengthUnit.Kilometer, player, LatLng(lat, lng));
+    final km = const Distance().as(
+      LengthUnit.Kilometer,
+      player,
+      LatLng(lat, lng),
+    );
     final v = (30 + km * 0.06).clamp(30.0, 900.0);
     return (v / 5).round() * 5;
   }
@@ -597,7 +772,8 @@ class GameState extends ChangeNotifier {
   bool study(Course c) {
     if (!canStudy(c) || balance < 50) return false;
     _spend(c.nameKey.tr, 50);
-    courseProgress[c.id] = ((courseProgress[c.id] ?? 0) + 0.25).clamp(0.0, 1.0).toDouble();
+    courseProgress[c.id] =
+        ((courseProgress[c.id] ?? 0) + 0.25).clamp(0.0, 1.0).toDouble();
     _changed();
     return true;
   }
@@ -609,19 +785,44 @@ class GameState extends ChangeNotifier {
     if (kind == 'buy') {
       final dev = dealDevices[_rng.nextInt(dealDevices.length)];
       final market = dev.market.toDouble();
-      final ask = (market * (1.05 + _rng.nextDouble() * 0.15) / 5).round() * 5.0;
-      final limit = (market * (0.6 + _rng.nextDouble() * 0.2) / 5).round() * 5.0;
-      d = Deal(id: nextId(), kind: 'buy', item: dev.name, counterpart: name, market: market, ask: ask, limit: limit);
-      d.messages.add(ChatMsg(
-        false,
-        'greet_buy'.tr.replaceAll('{item}', dev.name).replaceAll('{ask}', ask.toInt().toString()),
-      ));
+      final ask =
+          (market * (1.05 + _rng.nextDouble() * 0.15) / 5).round() * 5.0;
+      final limit =
+          (market * (0.6 + _rng.nextDouble() * 0.2) / 5).round() * 5.0;
+      d = Deal(
+        id: nextId(),
+        kind: 'buy',
+        item: dev.name,
+        counterpart: name,
+        market: market,
+        ask: ask,
+        limit: limit,
+      );
+      d.messages.add(
+        ChatMsg(
+          false,
+          'greet_buy'.tr
+              .replaceAll('{item}', dev.name)
+              .replaceAll('{ask}', ask.toInt().toString()),
+        ),
+      );
     } else {
       final it = item!;
-      final limit = (it.market * (0.9 + _rng.nextDouble() * 0.3) / 5).round() * 5.0;
-      d = Deal(id: nextId(), kind: 'sell', item: it.name, counterpart: name, market: it.market, ask: it.market * 1.1, limit: limit);
+      final limit =
+          (it.market * (0.9 + _rng.nextDouble() * 0.3) / 5).round() * 5.0;
+      d = Deal(
+        id: nextId(),
+        kind: 'sell',
+        item: it.name,
+        counterpart: name,
+        market: it.market,
+        ask: it.market * 1.1,
+        limit: limit,
+      );
       d.stockId = it.id;
-      d.messages.add(ChatMsg(false, 'greet_sell'.tr.replaceAll('{item}', it.name)));
+      d.messages.add(
+        ChatMsg(false, 'greet_sell'.tr.replaceAll('{item}', it.name)),
+      );
     }
     deals.insert(0, d);
     if (deals.length > 14) {
@@ -667,7 +868,8 @@ class GameState extends ChangeNotifier {
 
     String outcome = 'chat';
     double? number;
-    var hint = 'The player made no price offer. Reply briefly in character and ask them to name a price.';
+    var hint =
+        'The player made no price offer. Reply briefly in character and ask them to name a price.';
     var offlineKey = 'o_chat';
 
     if (offer != null) {
@@ -697,23 +899,28 @@ class GameState extends ChangeNotifier {
       final p = number?.toInt();
       switch (outcome) {
         case 'accept':
-          hint = 'GAME RESULT: you ACCEPT the price \$$p. Confirm the deal in 1-2 short sentences.';
+          hint =
+              'GAME RESULT: you ACCEPT the price \$$p. Confirm the deal in 1-2 short sentences.';
           offlineKey = d.kind == 'buy' ? 'o_acc_s' : 'o_acc_b';
           break;
         case 'counter':
-          hint = 'GAME RESULT: you REJECT this offer and counter with exactly \$$p. Say so in 1-2 short sentences.';
+          hint =
+              'GAME RESULT: you REJECT this offer and counter with exactly \$$p. Say so in 1-2 short sentences.';
           offlineKey = d.kind == 'buy' ? 'o_ctr_s' : 'o_ctr_b';
           break;
         default:
-          hint = 'GAME RESULT: you are done negotiating and walk away. Say goodbye in 1 short sentence.';
+          hint =
+              'GAME RESULT: you are done negotiating and walk away. Say goodbye in 1 short sentence.';
           offlineKey = 'o_leave';
       }
     }
 
-    final role = d.kind == 'buy'
-        ? 'a private person selling a used ${d.item} (market value about \$${d.market.toInt()}, your asking price \$${d.ask.toInt()}) to the player, who owns a tech repair and resale shop'
-        : 'a customer who wants to buy a used ${d.item} (market value about \$${d.market.toInt()}) from the player, who owns a tech repair and resale shop';
-    final persona = 'You are ${d.counterpart}, $role, in a game called TechLife. '
+    final role =
+        d.kind == 'buy'
+            ? 'a private person selling a used ${d.item} (market value about \$${d.market.toInt()}, your asking price \$${d.ask.toInt()}) to the player, who owns a tech repair and resale shop'
+            : 'a customer who wants to buy a used ${d.item} (market value about \$${d.market.toInt()}) from the player, who owns a tech repair and resale shop';
+    final persona =
+        'You are ${d.counterpart}, $role, in a game called TechLife. '
         'Stay in character, haggle realistically, keep every reply to 1-2 short sentences, '
         'reply only in ${AiService.langName(lang)}. Never reveal your hidden limit price '
         'and never invent a price the GAME RESULT does not give you.';
@@ -745,7 +952,10 @@ class GameState extends ChangeNotifier {
         _note('money', 'n_pay', '+\$${number.toInt()}');
       }
       reputation = (reputation + 0.02).clamp(1.0, 5.0).toDouble();
-      AppLog.I.info('game', 'сделка (${d.kind}) ${d.item} за \$${number.toInt()}');
+      AppLog.I.info(
+        'game',
+        'сделка (${d.kind}) ${d.item} за \$${number.toInt()}',
+      );
     } else if (outcome == 'leave') {
       d.status = 'lost';
     }
@@ -841,7 +1051,12 @@ class GameState extends ChangeNotifier {
 
   void setForceOffline(bool v) {
     forceOffline = v;
-    AppLog.I.info('net', v ? 'админ: имитация «нет интернета» включена' : 'админ: имитация «нет интернета» выключена');
+    AppLog.I.info(
+      'net',
+      v
+          ? 'админ: имитация «нет интернета» включена'
+          : 'админ: имитация «нет интернета» выключена',
+    );
     notifyListeners();
   }
 
@@ -859,14 +1074,22 @@ class GameState extends ChangeNotifier {
     aiCustomModel = model.trim();
     _applyAi();
     AiService.resume();
-    AppLog.I.info('admin', aiCustomUrl.isEmpty ? 'ИИ: провайдер Google' : 'ИИ: свой провайдер $aiCustomUrl, модель ${aiCustomModel.isEmpty ? 'по умолчанию' : aiCustomModel}');
+    AppLog.I.info(
+      'admin',
+      aiCustomUrl.isEmpty
+          ? 'ИИ: провайдер Google'
+          : 'ИИ: свой провайдер $aiCustomUrl, модель ${aiCustomModel.isEmpty ? 'по умолчанию' : aiCustomModel}',
+    );
     _changed();
   }
 
   void setAiModel(String m) {
     aiModel = m.trim();
     AiService.modelOverride = aiModel.isEmpty ? null : aiModel;
-    AppLog.I.info('admin', 'модель ИИ: ${aiModel.isEmpty ? 'по умолчанию' : aiModel}');
+    AppLog.I.info(
+      'admin',
+      'модель ИИ: ${aiModel.isEmpty ? 'по умолчанию' : aiModel}',
+    );
     _changed();
   }
 

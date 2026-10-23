@@ -57,7 +57,12 @@ class _SettingsAppState extends State<SettingsApp> {
     [
       _Item('appearance', 'appearance', Icons.palette, Color(0xFF3B82F6)),
       _Item('display', 'display', Icons.desktop_windows, Color(0xFF0EA5E9)),
-      _Item('notifications', 'notifications', Icons.notifications, Color(0xFFEF4444)),
+      _Item(
+        'notifications',
+        'notifications',
+        Icons.notifications,
+        Color(0xFFEF4444),
+      ),
       _Item('sound', 'sound_vibe', Icons.volume_up, Color(0xFFEC4899)),
     ],
     [
@@ -67,7 +72,12 @@ class _SettingsAppState extends State<SettingsApp> {
     ],
     [
       _Item('about', 'about', Icons.info, Color(0xFF6B7280)),
-      _Item('admin', 'admin_panel', Icons.admin_panel_settings, Color(0xFFDC2626)),
+      _Item(
+        'admin',
+        'admin_panel',
+        Icons.admin_panel_settings,
+        Color(0xFFDC2626),
+      ),
     ],
   ];
 
@@ -91,7 +101,9 @@ class _SettingsAppState extends State<SettingsApp> {
     final rows = <Widget>[];
     for (var i = 0; i < items.length; i++) {
       rows.add(items[i]);
-      if (i < items.length - 1) rows.add(const Divider(height: 1, indent: 52, color: Colors.white12));
+      if (i < items.length - 1) {
+        rows.add(const Divider(height: 1, indent: 52, color: Colors.white12));
+      }
     }
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -102,7 +114,10 @@ class _SettingsAppState extends State<SettingsApp> {
           if (footer != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
-              child: Text(footer, style: const TextStyle(color: C.sub, fontSize: 12)),
+              child: Text(
+                footer,
+                style: const TextStyle(color: C.sub, fontSize: 12),
+              ),
             ),
         ],
       ),
@@ -110,13 +125,23 @@ class _SettingsAppState extends State<SettingsApp> {
   }
 
   Widget _icon(IconData icon, Color color) => Container(
-        width: 30,
-        height: 30,
-        decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(8)),
-        child: Icon(icon, color: Colors.white, size: 18),
-      );
+    width: 30,
+    height: 30,
+    decoration: BoxDecoration(
+      color: color,
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Icon(icon, color: Colors.white, size: 18),
+  );
 
-  Widget _row(IconData icon, Color color, String title, {String? value, VoidCallback? onTap, bool chevron = true}) {
+  Widget _row(
+    IconData icon,
+    Color color,
+    String title, {
+    String? value,
+    VoidCallback? onTap,
+    bool chevron = true,
+  }) {
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -126,15 +151,25 @@ class _SettingsAppState extends State<SettingsApp> {
             _icon(icon, color),
             const SizedBox(width: 12),
             Expanded(child: Text(title, style: const TextStyle(fontSize: 15))),
-            if (value != null) Text(value, style: const TextStyle(color: C.sub, fontSize: 14)),
-            if (chevron) ...[const SizedBox(width: 4), const Icon(Icons.chevron_right, color: C.sub, size: 20)],
+            if (value != null)
+              Text(value, style: const TextStyle(color: C.sub, fontSize: 14)),
+            if (chevron) ...[
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right, color: C.sub, size: 20),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _switch(IconData icon, Color color, String title, bool value, ValueChanged<bool> onChanged) {
+  Widget _switch(
+    IconData icon,
+    Color color,
+    String title,
+    bool value,
+    ValueChanged<bool> onChanged,
+  ) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: Row(
@@ -142,7 +177,11 @@ class _SettingsAppState extends State<SettingsApp> {
           _icon(icon, color),
           const SizedBox(width: 12),
           Expanded(child: Text(title, style: const TextStyle(fontSize: 15))),
-          Switch.adaptive(value: value, onChanged: onChanged, activeTrackColor: C.green),
+          Switch.adaptive(
+            value: value,
+            onChanged: onChanged,
+            activeTrackColor: C.green,
+          ),
         ],
       ),
     );
@@ -152,7 +191,8 @@ class _SettingsAppState extends State<SettingsApp> {
   void _toMain() => setState(() => page = 'main');
   void _toAppearance() => setState(() => page = 'appearance');
 
-  bool _isLight(GameState gs) => isLightMode(gs.themeMode, MediaQuery.platformBrightnessOf(context));
+  bool _isLight(GameState gs) =>
+      isLightMode(gs.themeMode, MediaQuery.platformBrightnessOf(context));
 
   // --------------------------------------------------------------- build
   @override
@@ -161,23 +201,55 @@ class _SettingsAppState extends State<SettingsApp> {
     final VoidCallback? onBack = page == 'main' ? null : _toMain;
     switch (page) {
       case 'profile':
-        return AppPage(title: 'profile'.tr, onBack: onBack, child: _profile(gs));
+        return AppPage(
+          title: 'profile'.tr,
+          onBack: onBack,
+          child: _profile(gs),
+        );
       case 'appearance':
-        return AppPage(title: 'appearance'.tr, onBack: onBack, child: _appearance(gs));
+        return AppPage(
+          title: 'appearance'.tr,
+          onBack: onBack,
+          child: _appearance(gs),
+        );
       case 'crop':
-        return AppPage(title: 'wp_crop'.tr, onBack: _toAppearance, child: _crop(gs));
+        return AppPage(
+          title: 'wp_crop'.tr,
+          onBack: _toAppearance,
+          child: _crop(gs),
+        );
       case 'display':
-        return AppPage(title: 'display'.tr, onBack: onBack, child: _display(gs));
+        return AppPage(
+          title: 'display'.tr,
+          onBack: onBack,
+          child: _display(gs),
+        );
       case 'notifications':
-        return AppPage(title: 'notifications'.tr, onBack: onBack, child: _notifications(gs));
+        return AppPage(
+          title: 'notifications'.tr,
+          onBack: onBack,
+          child: _notifications(gs),
+        );
       case 'sound':
-        return AppPage(title: 'sound_vibe'.tr, onBack: onBack, child: _sound(gs));
+        return AppPage(
+          title: 'sound_vibe'.tr,
+          onBack: onBack,
+          child: _sound(gs),
+        );
       case 'language':
-        return AppPage(title: 'language'.tr, onBack: onBack, child: _language(gs));
+        return AppPage(
+          title: 'language'.tr,
+          onBack: onBack,
+          child: _language(gs),
+        );
       case 'ai':
         return AppPage(title: 'ai_network'.tr, onBack: onBack, child: _ai(gs));
       case 'data':
-        return AppPage(title: 'data_saves'.tr, onBack: onBack, child: _data(gs));
+        return AppPage(
+          title: 'data_saves'.tr,
+          onBack: onBack,
+          child: _data(gs),
+        );
       case 'about':
         return AppPage(title: 'about'.tr, onBack: onBack, child: _about(gs));
       case 'admin':
@@ -202,7 +274,10 @@ class _SettingsAppState extends State<SettingsApp> {
             filled: true,
             fillColor: C.card,
             isDense: true,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide.none,
+            ),
           ),
         ),
         const SizedBox(height: 14),
@@ -214,14 +289,30 @@ class _SettingsAppState extends State<SettingsApp> {
                 padding: const EdgeInsets.all(12),
                 child: Row(
                   children: [
-                    CircleAvatar(radius: 26, backgroundColor: C.accent, child: Text(name[0].toUpperCase(), style: const TextStyle(fontSize: 22))),
+                    CircleAvatar(
+                      radius: 26,
+                      backgroundColor: C.accent,
+                      child: Text(
+                        name[0].toUpperCase(),
+                        style: const TextStyle(fontSize: 22),
+                      ),
+                    ),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-                          Text('profile'.tr, style: const TextStyle(color: C.sub, fontSize: 12)),
+                          Text(
+                            name,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Text(
+                            'profile'.tr,
+                            style: const TextStyle(color: C.sub, fontSize: 12),
+                          ),
                         ],
                       ),
                     ),
@@ -233,7 +324,13 @@ class _SettingsAppState extends State<SettingsApp> {
           ]),
         for (final g in _groups)
           () {
-            final shown = g.where((i) => q.isEmpty || i.titleKey.tr.toLowerCase().contains(q)).toList();
+            final shown =
+                g
+                    .where(
+                      (i) =>
+                          q.isEmpty || i.titleKey.tr.toLowerCase().contains(q),
+                    )
+                    .toList();
             if (shown.isEmpty) return const SizedBox.shrink();
             return _group([
               for (final i in shown)
@@ -241,9 +338,12 @@ class _SettingsAppState extends State<SettingsApp> {
                   i.icon,
                   i.color,
                   i.titleKey.tr,
-                  value: i.page == 'language'
-                      ? names[gs.lang]
-                      : (i.page == 'ai' ? (gs.online ? 'online'.tr : 'offline'.tr) : null),
+                  value:
+                      i.page == 'language'
+                          ? names[gs.lang]
+                          : (i.page == 'ai'
+                              ? (gs.online ? 'online'.tr : 'offline'.tr)
+                              : null),
                   onTap: () => _open(i.page),
                 ),
             ]);
@@ -259,11 +359,18 @@ class _SettingsAppState extends State<SettingsApp> {
           child: CircleAvatar(
             radius: 40,
             backgroundColor: C.accent,
-            child: Text((gs.playerName.isEmpty ? 'player'.tr : gs.playerName)[0].toUpperCase(), style: const TextStyle(fontSize: 34)),
+            child: Text(
+              (gs.playerName.isEmpty ? 'player'.tr : gs.playerName)[0]
+                  .toUpperCase(),
+              style: const TextStyle(fontSize: 34),
+            ),
           ),
         ),
         const SizedBox(height: 20),
-        Text('player_name'.tr, style: const TextStyle(color: C.sub, fontWeight: FontWeight.w600)),
+        Text(
+          'player_name'.tr,
+          style: const TextStyle(color: C.sub, fontWeight: FontWeight.w600),
+        ),
         const SizedBox(height: 6),
         TextField(
           controller: nameCtrl,
@@ -271,7 +378,10 @@ class _SettingsAppState extends State<SettingsApp> {
           decoration: InputDecoration(
             filled: true,
             fillColor: C.card,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide.none,
+            ),
           ),
         ),
         Align(
@@ -291,7 +401,12 @@ class _SettingsAppState extends State<SettingsApp> {
   // ----------------------------------------------------------- appearance
   Future<void> _pickPhoto(bool lock) async {
     try {
-      final f = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 1600, maxHeight: 2400, imageQuality: 85);
+      final f = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1600,
+        maxHeight: 2400,
+        imageQuality: 85,
+      );
       if (f == null) return;
       final bytes = await f.readAsBytes();
       final codec = await ui.instantiateImageCodec(bytes);
@@ -333,29 +448,53 @@ class _SettingsAppState extends State<SettingsApp> {
     final ratio = Shell.phoneSize.width / Shell.phoneSize.height;
     return ListView(
       children: [
-        Text('theme'.tr, style: const TextStyle(color: C.sub, fontWeight: FontWeight.w600)),
+        Text(
+          'theme'.tr,
+          style: const TextStyle(color: C.sub, fontWeight: FontWeight.w600),
+        ),
         const SizedBox(height: 6),
         SizedBox(
           width: double.infinity,
           child: SegmentedButton<int>(
             showSelectedIcon: false,
             segments: [
-              ButtonSegment(value: 0, icon: const Icon(Icons.brightness_auto, size: 18), label: Text('theme_system'.tr)),
-              ButtonSegment(value: 1, icon: const Icon(Icons.light_mode, size: 18), label: Text('theme_light'.tr)),
-              ButtonSegment(value: 2, icon: const Icon(Icons.dark_mode, size: 18), label: Text('theme_dark'.tr)),
+              ButtonSegment(
+                value: 0,
+                icon: const Icon(Icons.brightness_auto, size: 18),
+                label: Text('theme_system'.tr),
+              ),
+              ButtonSegment(
+                value: 1,
+                icon: const Icon(Icons.light_mode, size: 18),
+                label: Text('theme_light'.tr),
+              ),
+              ButtonSegment(
+                value: 2,
+                icon: const Icon(Icons.dark_mode, size: 18),
+                label: Text('theme_dark'.tr),
+              ),
             ],
             selected: {gs.themeMode},
             onSelectionChanged: (s) => g.setThemeMode(s.first),
           ),
         ),
         const SizedBox(height: 18),
-        Text('wallpaper'.tr, style: const TextStyle(color: C.sub, fontWeight: FontWeight.w600)),
+        Text(
+          'wallpaper'.tr,
+          style: const TextStyle(color: C.sub, fontWeight: FontWeight.w600),
+        ),
         const SizedBox(height: 6),
         _group([
-          _switch(Icons.lock, const Color(0xFF6B7280), 'wp_lock_sep'.tr, gs.lockSeparate, (v) {
-            g.setLockSeparate(v);
-            if (!v) setState(() => _target = 'home');
-          }),
+          _switch(
+            Icons.lock,
+            const Color(0xFF6B7280),
+            'wp_lock_sep'.tr,
+            gs.lockSeparate,
+            (v) {
+              g.setLockSeparate(v);
+              if (!v) setState(() => _target = 'home');
+            },
+          ),
         ]),
         if (gs.lockSeparate)
           Padding(
@@ -414,15 +553,34 @@ class _SettingsAppState extends State<SettingsApp> {
                         height: 80,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
-                          gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: wallpaperPresets[i]),
-                          border: Border.all(color: sel ? C.accent : Colors.white24, width: sel ? 3 : 1),
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: wallpaperPresets[i],
+                          ),
+                          border: Border.all(
+                            color: sel ? C.accent : Colors.white24,
+                            width: sel ? 3 : 1,
+                          ),
                         ),
-                        child: sel ? const Icon(Icons.check, color: Colors.white) : null,
+                        child:
+                            sel
+                                ? const Icon(Icons.check, color: Colors.white)
+                                : null,
                       ),
                       const SizedBox(height: 4),
                       SizedBox(
                         width: 66,
-                        child: Text(wallpaperKeys[i].tr, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: Colors.white70)),
+                        child: Text(
+                          wallpaperKeys[i].tr,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.white70,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -509,44 +667,52 @@ class _SettingsAppState extends State<SettingsApp> {
 
     return Column(
       children: [
-        Text('wp_drag_hint'.tr, textAlign: TextAlign.center, style: const TextStyle(color: C.sub, fontSize: 13)),
+        Text(
+          'wp_drag_hint'.tr,
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: C.sub, fontSize: 13),
+        ),
         const SizedBox(height: 8),
         Expanded(
           child: Center(
             child: AspectRatio(
               aspectRatio: ratio,
-              child: LayoutBuilder(builder: (context, c) {
-                _box = Size(c.maxWidth, c.maxHeight);
-                return Listener(
-                  onPointerSignal: (e) {
-                    if (e is PointerScrollEvent) zoomBy(e.scrollDelta.dy > 0 ? 0.93 : 1.07);
-                  },
-                  child: GestureDetector(
-                    onScaleStart: (_) => _s0 = d.scale,
-                    onScaleUpdate: (u) {
-                      setState(() {
-                        d.scale = (_s0 * u.scale).clamp(1.0, 5.0).toDouble();
-                        d.ox += u.focalPointDelta.dx / _box.width;
-                        d.oy += u.focalPointDelta.dy / _box.height;
-                        d.clampTo(_box.width, _box.height);
-                      });
+              child: LayoutBuilder(
+                builder: (context, c) {
+                  _box = Size(c.maxWidth, c.maxHeight);
+                  return Listener(
+                    onPointerSignal: (e) {
+                      if (e is PointerScrollEvent) {
+                        zoomBy(e.scrollDelta.dy > 0 ? 0.93 : 1.07);
+                      }
                     },
-                    child: ThemeFilter(
-                      light: light,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.white54, width: 2),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(18),
-                          child: WallpaperView(cfg: d, dim: gs.wallpaperDim),
+                    child: GestureDetector(
+                      onScaleStart: (_) => _s0 = d.scale,
+                      onScaleUpdate: (u) {
+                        setState(() {
+                          d.scale = (_s0 * u.scale).clamp(1.0, 5.0).toDouble();
+                          d.ox += u.focalPointDelta.dx / _box.width;
+                          d.oy += u.focalPointDelta.dy / _box.height;
+                          d.clampTo(_box.width, _box.height);
+                        });
+                      },
+                      child: ThemeFilter(
+                        light: light,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.white54, width: 2),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(18),
+                            child: WallpaperView(cfg: d, dim: gs.wallpaperDim),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                );
-              }),
+                  );
+                },
+              ),
             ),
           ),
         ),
@@ -558,10 +724,11 @@ class _SettingsAppState extends State<SettingsApp> {
                 value: d.scale.clamp(1.0, 5.0).toDouble(),
                 min: 1,
                 max: 5,
-                onChanged: (v) => setState(() {
-                  d.scale = v;
-                  d.clampTo(_box.width, _box.height);
-                }),
+                onChanged:
+                    (v) => setState(() {
+                      d.scale = v;
+                      d.clampTo(_box.width, _box.height);
+                    }),
               ),
             ),
             const Icon(Icons.zoom_in, color: C.sub),
@@ -571,11 +738,12 @@ class _SettingsAppState extends State<SettingsApp> {
           children: [
             Expanded(
               child: OutlinedButton(
-                onPressed: () => setState(() {
-                  d.scale = 1;
-                  d.ox = 0;
-                  d.oy = 0;
-                }),
+                onPressed:
+                    () => setState(() {
+                      d.scale = 1;
+                      d.ox = 0;
+                      d.oy = 0;
+                    }),
                 child: Text('wp_reset'.tr),
               ),
             ),
@@ -584,7 +752,15 @@ class _SettingsAppState extends State<SettingsApp> {
               child: FilledButton(
                 onPressed: () {
                   d.clampTo(_box.width, _box.height);
-                  context.read<GameState>().setWallpaperImage(d.bytes!, d.iw, d.ih, d.scale, d.ox, d.oy, lock: _cropLock);
+                  context.read<GameState>().setWallpaperImage(
+                    d.bytes!,
+                    d.iw,
+                    d.ih,
+                    d.scale,
+                    d.ox,
+                    d.oy,
+                    lock: _cropLock,
+                  );
                   toast(context, 'saved'.tr);
                   _toAppearance();
                 },
@@ -624,186 +800,366 @@ class _SettingsAppState extends State<SettingsApp> {
     final g = context.read<GameState>();
     final ui = _uiTmp ?? gs.uiScalePct.toDouble();
     Widget title(String t) => Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Text(t, style: const TextStyle(color: C.sub, fontWeight: FontWeight.w600)),
-        );
-    return ListView(children: [
-      title('layout_mode'.tr),
-      _choice(['layout_auto'.tr, 'layout_phone'.tr, 'layout_tablet'.tr], gs.layoutMode, g.setLayoutMode),
-      const SizedBox(height: 6),
-      Text('layout_hint'.tr, style: const TextStyle(color: C.sub, fontSize: 12)),
-      const SizedBox(height: 18),
-      title('${'ui_scale'.tr}: ${ui.round()}%'),
-      Slider(
-        value: ui.clamp(70.0, 160.0).toDouble(),
-        min: 70,
-        max: 160,
-        divisions: 18,
-        label: '${ui.round()}%',
-        onChanged: (v) => setState(() => _uiTmp = v),
-        onChangeEnd: (v) {
-          g.setUiScale(v.round());
-          setState(() => _uiTmp = null);
-        },
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        t,
+        style: const TextStyle(color: C.sub, fontWeight: FontWeight.w600),
       ),
-      Align(
-        alignment: Alignment.centerLeft,
-        child: TextButton(onPressed: () => g.setUiScale(100), child: Text('reset_100'.tr)),
-      ),
-      const SizedBox(height: 12),
-      if (WinService.isDesktop) ...[
-        _group([
-          _switch(Icons.fullscreen, const Color(0xFF8B5CF6), 'fullscreen'.tr, gs.fullscreen, (v) => g.setFullscreen(v)),
-        ], footer: 'fullscreen_hint'.tr),
-        title('window_size'.tr),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final z in sizes)
-              ChoiceChip(
-                label: Text('${z[0]} × ${z[1]}'),
-                selected: !gs.fullscreen && gs.winW == z[0] && gs.winH == z[1],
-                onSelected: (_) => g.setWindowSize(z[0], z[1]),
-              ),
-            ActionChip(
-              avatar: const Icon(Icons.open_in_full, size: 16),
-              label: Text('maximize'.tr),
-              onPressed: () => WinService.maximize(),
-            ),
-          ],
+    );
+    return ListView(
+      children: [
+        title('layout_mode'.tr),
+        _choice(
+          ['layout_auto'.tr, 'layout_phone'.tr, 'layout_tablet'.tr],
+          gs.layoutMode,
+          g.setLayoutMode,
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'layout_hint'.tr,
+          style: const TextStyle(color: C.sub, fontSize: 12),
         ),
         const SizedBox(height: 18),
-      ] else
-        Padding(
-          padding: const EdgeInsets.only(bottom: 18),
-          child: Text('desktop_only_hint'.tr, style: const TextStyle(color: C.sub, fontSize: 12)),
+        title('${'ui_scale'.tr}: ${ui.round()}%'),
+        Slider(
+          value: ui.clamp(70.0, 160.0).toDouble(),
+          min: 70,
+          max: 160,
+          divisions: 18,
+          label: '${ui.round()}%',
+          onChanged: (v) => setState(() => _uiTmp = v),
+          onChangeEnd: (v) {
+            g.setUiScale(v.round());
+            setState(() => _uiTmp = null);
+          },
         ),
-      title('map_style'.tr),
-      _choice(['style_auto'.tr, 'style_streets'.tr, 'style_sat'.tr, 'style_offline'.tr], gs.mapStyle, g.setMapStyle),
-      const SizedBox(height: 6),
-      Text('map_style_hint'.tr, style: const TextStyle(color: C.sub, fontSize: 12)),
-    ]);
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton(
+            onPressed: () => g.setUiScale(100),
+            child: Text('reset_100'.tr),
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (WinService.isDesktop) ...[
+          _group([
+            _switch(
+              Icons.fullscreen,
+              const Color(0xFF8B5CF6),
+              'fullscreen'.tr,
+              gs.fullscreen,
+              (v) => g.setFullscreen(v),
+            ),
+          ], footer: 'fullscreen_hint'.tr),
+          title('window_size'.tr),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final z in sizes)
+                ChoiceChip(
+                  label: Text('${z[0]} × ${z[1]}'),
+                  selected:
+                      !gs.fullscreen && gs.winW == z[0] && gs.winH == z[1],
+                  onSelected: (_) => g.setWindowSize(z[0], z[1]),
+                ),
+              ActionChip(
+                avatar: const Icon(Icons.open_in_full, size: 16),
+                label: Text('maximize'.tr),
+                onPressed: () => WinService.maximize(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+        ] else
+          Padding(
+            padding: const EdgeInsets.only(bottom: 18),
+            child: Text(
+              'desktop_only_hint'.tr,
+              style: const TextStyle(color: C.sub, fontSize: 12),
+            ),
+          ),
+        title('map_style'.tr),
+        _choice(
+          [
+            'style_auto'.tr,
+            'style_streets'.tr,
+            'style_sat'.tr,
+            'style_offline'.tr,
+          ],
+          gs.mapStyle,
+          g.setMapStyle,
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'map_style_hint'.tr,
+          style: const TextStyle(color: C.sub, fontSize: 12),
+        ),
+      ],
+    );
   }
 
   Widget _notifications(GameState gs) {
     final g = context.read<GameState>();
-    return ListView(children: [
-      _group([
-        _switch(Icons.build, C.orange, 'notif_orders'.tr, gs.notifOrders, g.setNotifOrders),
-        _switch(Icons.chat_bubble, C.green, 'notif_deals'.tr, gs.notifDeals, g.setNotifDeals),
-      ]),
-    ]);
+    return ListView(
+      children: [
+        _group([
+          _switch(
+            Icons.build,
+            C.orange,
+            'notif_orders'.tr,
+            gs.notifOrders,
+            g.setNotifOrders,
+          ),
+          _switch(
+            Icons.chat_bubble,
+            C.green,
+            'notif_deals'.tr,
+            gs.notifDeals,
+            g.setNotifDeals,
+          ),
+        ]),
+      ],
+    );
   }
 
   Widget _sound(GameState gs) {
     final g = context.read<GameState>();
-    return ListView(children: [
-      _group([_switch(Icons.vibration, const Color(0xFFEC4899), 'haptics'.tr, gs.haptics, g.setHaptics)]),
-    ]);
+    return ListView(
+      children: [
+        _group([
+          _switch(
+            Icons.vibration,
+            const Color(0xFFEC4899),
+            'haptics'.tr,
+            gs.haptics,
+            g.setHaptics,
+          ),
+        ]),
+      ],
+    );
   }
 
   Widget _language(GameState gs) {
-    return ListView(children: [
-      _group([
-        for (final l in I18n.langs)
-          InkWell(
-            onTap: () => context.read<GameState>().setLang(l),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              child: Row(children: [
-                Expanded(child: Text(names[l]!, style: const TextStyle(fontSize: 15))),
-                if (gs.lang == l) const Icon(Icons.check, color: C.accent),
-              ]),
+    return ListView(
+      children: [
+        _group([
+          for (final l in I18n.langs)
+            InkWell(
+              onTap: () => context.read<GameState>().setLang(l),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        names[l]!,
+                        style: const TextStyle(fontSize: 15),
+                      ),
+                    ),
+                    if (gs.lang == l) const Icon(Icons.check, color: C.accent),
+                  ],
+                ),
+              ),
             ),
-          ),
-      ]),
-    ]);
+        ]),
+      ],
+    );
   }
 
   Widget _ai(GameState gs) {
-    return ListView(children: [
-      _group([
-        _row(gs.online ? Icons.wifi : Icons.wifi_off, gs.online ? C.green : C.red, gs.online ? 'online'.tr : 'no_internet'.tr, chevron: false),
-        _row(Icons.vpn_key, const Color(0xFF8B5CF6), 'builtin_key'.tr, value: gs.hasBuiltInKey ? 'has'.tr : 'hasnt'.tr, chevron: false),
-        _row(Icons.key, const Color(0xFF6366F1), 'key_type'.tr, value: AiService.keyKind(gs.aiKey), chevron: false),
-      ], footer: gs.online ? null : 'ai_needs_net'.tr),
-      OutlinedButton.icon(onPressed: () => showDialog<void>(context: context, builder: (c) => GeminiSetupDialog(gs: gs)), icon: const Icon(Icons.auto_awesome), label: Text(mt('Модель Gemini и проверка подключения', 'Gemini model and connection test', 'Модель Gemini й перевірка підключення'))),
-      Text('gemini_key'.tr, style: const TextStyle(color: C.sub, fontWeight: FontWeight.w600)),
-      const SizedBox(height: 6),
-      TextField(
-        controller: keyCtrl,
-        obscureText: true,
-        decoration: InputDecoration(
-          hintText: 'AIza… / AQ.…',
-          filled: true,
-          fillColor: C.card,
-          isDense: true,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+    if (!AdminAuth.unlocked) {
+      return ListView(
+        children: [
+          const Icon(Icons.auto_awesome, color: C.accent, size: 42),
+          const SizedBox(height: 16),
+          Text(
+            mt(
+              'Игровой ИИ подключён автоматически. Настройка ключей и модели не требуется.',
+              'Game AI connects automatically. No API key or model setup is needed.',
+              'Ігровий ШІ підключається автоматично. Налаштування ключа й моделі не потрібне.',
+            ),
+          ),
+          const SizedBox(height: 16),
+          FilledButton(
+            onPressed: () async {
+              final r = await gs.adminTestAi();
+              if (mounted) {
+                toast(
+                  context,
+                  r.ok
+                      ? mt(
+                        'Подключение работает',
+                        'Connection successful',
+                        'Підключення працює',
+                      )
+                      : mt(
+                        'Сервис временно недоступен',
+                        'Service temporarily unavailable',
+                        'Сервіс тимчасово недоступний',
+                      ),
+                );
+              }
+            },
+            child: Text(mt('Проверить ИИ', 'Check AI', 'Перевірити ШІ')),
+          ),
+        ],
+      );
+    }
+    return ListView(
+      children: [
+        _group([
+          _row(
+            gs.online ? Icons.wifi : Icons.wifi_off,
+            gs.online ? C.green : C.red,
+            gs.online ? 'online'.tr : 'no_internet'.tr,
+            chevron: false,
+          ),
+          _row(
+            Icons.vpn_key,
+            const Color(0xFF8B5CF6),
+            'builtin_key'.tr,
+            value: gs.hasBuiltInKey ? 'has'.tr : 'hasnt'.tr,
+            chevron: false,
+          ),
+          _row(
+            Icons.key,
+            const Color(0xFF6366F1),
+            'key_type'.tr,
+            value: AiService.keyKind(gs.aiKey),
+            chevron: false,
+          ),
+        ], footer: gs.online ? null : 'ai_needs_net'.tr),
+        OutlinedButton.icon(
+          onPressed:
+              () => showDialog<void>(
+                context: context,
+                builder: (c) => GeminiSetupDialog(gs: gs),
+              ),
+          icon: const Icon(Icons.auto_awesome),
+          label: Text(
+            mt(
+              'Модель Gemini и проверка подключения',
+              'Gemini model and connection test',
+              'Модель Gemini й перевірка підключення',
+            ),
+          ),
         ),
-      ),
-      const SizedBox(height: 6),
-      Text('${'key_hint'.tr} ${'ai_hint_own'.tr}', style: const TextStyle(color: C.sub, fontSize: 12)),
-      const SizedBox(height: 8),
-      Align(
-        alignment: Alignment.centerLeft,
-        child: FilledButton(
-          onPressed: () {
-            context.read<GameState>().setKey(keyCtrl.text);
-            toast(context, 'saved'.tr);
-          },
-          child: Text('save'.tr),
+        Text(
+          'gemini_key'.tr,
+          style: const TextStyle(color: C.sub, fontWeight: FontWeight.w600),
         ),
-      ),
-    ]);
+        const SizedBox(height: 6),
+        TextField(
+          controller: keyCtrl,
+          obscureText: true,
+          decoration: InputDecoration(
+            hintText: 'AIza… / AQ.…',
+            filled: true,
+            fillColor: C.card,
+            isDense: true,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          '${'key_hint'.tr} ${'ai_hint_own'.tr}',
+          style: const TextStyle(color: C.sub, fontSize: 12),
+        ),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: FilledButton(
+            onPressed: () {
+              context.read<GameState>().setKey(keyCtrl.text);
+              toast(context, 'saved'.tr);
+            },
+            child: Text('save'.tr),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _data(GameState gs) {
-    return ListView(children: [
-      OutlinedButton.icon(
-        style: OutlinedButton.styleFrom(foregroundColor: C.red),
-        icon: const Icon(Icons.delete_outline),
-        label: Text('reset'.tr),
-        onPressed: () async {
-          final g = context.read<GameState>();
-          final ok = await showDialog<bool>(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: Text('reset_q'.tr),
-              actions: [
-                TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('cancel'.tr)),
-                TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text('ok'.tr)),
-              ],
-            ),
-          );
-          if (ok == true) await g.resetAll();
-        },
-      ),
-    ]);
+    return ListView(
+      children: [
+        OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(foregroundColor: C.red),
+          icon: const Icon(Icons.delete_outline),
+          label: Text('reset'.tr),
+          onPressed: () async {
+            final g = context.read<GameState>();
+            final ok = await showDialog<bool>(
+              context: context,
+              builder:
+                  (ctx) => AlertDialog(
+                    title: Text('reset_q'.tr),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: Text('cancel'.tr),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: Text('ok'.tr),
+                      ),
+                    ],
+                  ),
+            );
+            if (ok == true) await g.resetAll();
+          },
+        ),
+      ],
+    );
   }
 
   Widget _about(GameState gs) {
     final light = _isLight(gs);
-    return ListView(children: [
-      Panel(
-        child: Column(
-          children: [
-            ThemeFilter(
-              light: light,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(22),
-                child: Image.asset('assets/icon/icon.png', width: 96, height: 96, errorBuilder: (_, __, ___) => const SizedBox(width: 96, height: 96)),
+    return ListView(
+      children: [
+        Panel(
+          child: Column(
+            children: [
+              ThemeFilter(
+                light: light,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(22),
+                  child: Image.asset(
+                    'assets/icon/icon.png',
+                    width: 96,
+                    height: 96,
+                    errorBuilder:
+                        (_, __, ___) => const SizedBox(width: 96, height: 96),
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            const Text(kAppName, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 4),
-            Text('about_text'.tr, textAlign: TextAlign.center, style: const TextStyle(color: C.sub)),
-            const SizedBox(height: 6),
-            const Text('v$kAppVersion', style: TextStyle(color: C.sub, fontSize: 12)),
-          ],
+              const SizedBox(height: 12),
+              const Text(
+                kAppName,
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'about_text'.tr,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: C.sub),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'v$kAppVersion',
+                style: TextStyle(color: C.sub, fontSize: 12),
+              ),
+            ],
+          ),
         ),
-      ),
-    ]);
+      ],
+    );
   }
 }

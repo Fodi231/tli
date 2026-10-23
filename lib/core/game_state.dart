@@ -73,6 +73,8 @@ class GameState extends ChangeNotifier {
   bool _netOnline = true;
   bool forceOffline = false; // admin: simulate "no internet"
   String aiModel = '';
+  String aiEndpoint = 'gemini';
+  bool manualAi = false;
   String aiCustomUrl = '', aiCustomKey = '', aiCustomModel = '';
   String? lastAiError;
   int lastAiMs = 0;
@@ -274,6 +276,8 @@ class GameState extends ChangeNotifier {
     notifOrders = (j['nord'] as bool?) ?? true;
     notifDeals = (j['ndeal'] as bool?) ?? true;
     aiModel = (j['aiModel'] as String?) ?? '';
+    aiEndpoint = j['aiEndpoint'] == 'vertex' ? 'vertex' : 'gemini';
+    manualAi = j['manualAi'] == true;
     aiCustomUrl = (j['aiUrl'] as String?) ?? '';
     aiCustomKey = (j['aiCKey'] as String?) ?? '';
     aiCustomModel = (j['aiCModel'] as String?) ?? '';
@@ -334,6 +338,8 @@ class GameState extends ChangeNotifier {
     'nord': notifOrders,
     'ndeal': notifDeals,
     'aiModel': aiModel,
+    'aiEndpoint': aiEndpoint,
+    'manualAi': manualAi,
     'aiUrl': aiCustomUrl,
     'aiCKey': aiCustomKey,
     'aiCModel': aiCustomModel,
@@ -1073,7 +1079,8 @@ class GameState extends ChangeNotifier {
         'Answer device-condition questions truthfully from the facts; never invent tests, repairs, extra accessories or payments. '
         'Only GAME RESULT controls price agreements. Never claim a purchase or sale is completed before player confirmation. Stay in the game.';
     final AiResult result;
-    if (online && (aiKey.isNotEmpty || AiService.hasCustom)) {
+    if (online &&
+        (AiService.hasManaged || aiKey.isNotEmpty || AiService.hasCustom)) {
       result = await AiService.reply(
         apiKey: aiKey,
         lang: lang,
@@ -1082,6 +1089,15 @@ class GameState extends ChangeNotifier {
         hint: hint,
         offlineKey: offlineKey,
         number: number,
+        managedContext: {
+          'deviceId': d.deviceId ?? deviceFor(d.item)?.id ?? '',
+          'kind': d.kind,
+          'fault': d.fault,
+          'lang': lang,
+          'name': d.counterpart,
+          'outcome': outcome,
+          'amount': number,
+        },
       );
     } else {
       final fallback =
@@ -1281,6 +1297,8 @@ class GameState extends ChangeNotifier {
   }
 
   void _applyAi() {
+    AiService.managedEnabled = !manualAi;
+    AiService.googleEndpoint = aiEndpoint;
     AiService.modelOverride = aiModel.isEmpty ? null : aiModel;
     AiService.customUrl = aiCustomUrl;
     AiService.customKey = aiCustomKey;
@@ -1289,6 +1307,7 @@ class GameState extends ChangeNotifier {
 
   /// Own OpenAI-compatible provider (empty url = back to Google).
   void setAiProvider(String url, String key, String model) {
+    manualAi = true;
     aiCustomUrl = url.trim();
     aiCustomKey = key.trim();
     aiCustomModel = model.trim();
@@ -1303,9 +1322,28 @@ class GameState extends ChangeNotifier {
     _changed();
   }
 
+  void useAutomaticAi() {
+    manualAi = false;
+    _applyAi();
+    AiService.resume();
+    _changed();
+  }
+
+  void setGoogleEndpoint(String endpoint) {
+    manualAi = true;
+    AiService.managedEnabled = false;
+    aiEndpoint = endpoint == 'vertex' ? 'vertex' : 'gemini';
+    AiService.googleEndpoint = aiEndpoint;
+    AiService.lastGood = null;
+    AiService.fixUrl = null;
+    AiService.resume();
+    _changed();
+  }
+
   void setAiModel(String m) {
     aiModel = m.trim();
     AiService.modelOverride = aiModel.isEmpty ? null : aiModel;
+    AiService.resume();
     AppLog.I.info(
       'admin',
       'модель ИИ: ${aiModel.isEmpty ? 'по умолчанию' : aiModel}',
@@ -1327,6 +1365,8 @@ class GameState extends ChangeNotifier {
   bool importSave(String text) {
     try {
       _load(jsonDecode(text) as Map<String, dynamic>);
+      _applyAi();
+      AiService.resume();
       I18n.lang = lang;
       player = LatLng(city.lat, city.lng);
       AppLog.I.info('admin', 'сохранение импортировано');

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -36,13 +37,9 @@ const aiPresets = <AiPreset>[
 
 /// AI client for the in-game dialogs.
 ///
-/// Google keys of both kinds work:
-///  * "AIza…" -> Gemini Developer API (generativelanguage.googleapis.com)
-///  * "AQ.…"  -> Vertex AI Express (aiplatform.googleapis.com). This one needs
-///    the "Vertex AI API" to be enabled in the key's Google Cloud project,
-///    otherwise Google answers HTTP 403.
-/// Both endpoints are tried (the one that worked last goes first). Alternatively
-/// any OpenAI-compatible service can be configured in the admin panel.
+/// Gemini Developer API and Vertex Express are distinct services. The player
+/// chooses the endpoint explicitly; an API-key prefix is not a service selector.
+/// A failed request is never silently sent to a different Google service.
 ///
 /// Game rules (accept / refuse / counter-offer) are decided locally; the AI only
 /// writes the in-character reply. On failure an offline phrase is used and the
@@ -52,6 +49,15 @@ class AiService {
   /// Injectable transport for deterministic API tests.
   static http.Client client = http.Client();
   static String? modelOverride;
+  static String googleEndpoint = 'gemini';
+  static const defaultModel = 'gemini-3.5-flash-lite';
+  static String managedUrl = const String.fromEnvironment(
+    'TECHLIFE_AI_URL',
+    defaultValue:
+        'https://techlife-ai-service.brainycloud19.chatgpt.site/api/chat',
+  );
+  static bool managedEnabled = true;
+  static bool get hasManaged => managedEnabled && managedUrl.trim().isNotEmpty;
 
   // Custom OpenAI-compatible provider (empty url = use Google).
   static String customUrl = '';
@@ -71,30 +77,29 @@ class AiService {
     'en': 'English',
     'uk': 'Ukrainian',
   };
-  static const _timeout = Duration(seconds: 12);
+  static const requestTimeout = Duration(seconds: 45);
 
   static String langName(String lang) => _langNames[lang] ?? 'English';
 
   static bool get hasCustom => customUrl.trim().isNotEmpty;
 
-  static bool isVertexKey(String k) => k.trim().startsWith('AQ.');
-
   static String keyKind(String k) {
+    if (hasManaged) return 'TechLife AI · автоматически';
     if (hasCustom) return 'свой провайдер (OpenAI-совместимый)';
-    final t = k.trim();
-    if (t.isEmpty) return 'нет ключа';
-    if (t.startsWith('AIza')) return 'Gemini API (AIza…)';
-    if (t.startsWith('AQ.')) return 'Vertex AI Express (AQ.…)';
-    return 'неизвестный формат';
+    if (k.trim().isEmpty) return 'нет ключа';
+    return googleEndpoint == 'vertex'
+        ? 'Vertex / Agent Platform Express'
+        : 'Gemini Developer API';
   }
 
   static String modelFor(String key) {
+    if (hasManaged) return defaultModel;
     if (hasCustom) {
       return customModel.trim().isEmpty ? 'gpt-4o-mini' : customModel.trim();
     }
     final o = modelOverride?.trim();
     if (o != null && o.isNotEmpty) return o;
-    return 'gemini-3.8-flash';
+    return defaultModel;
   }
 
   static String offline(String key, double? number) => I18n.t(
@@ -158,19 +163,23 @@ class AiService {
     final uri =
         vertex
             ? Uri.parse(
-              'https://aiplatform.googleapis.com/v1/publishers/google/models/$model:generateContent?key=$key',
+              'https://aiplatform.googleapis.com/v1/publishers/google/models/$model:generateContent',
             )
             : Uri.parse(
               'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent',
             );
     final headers = <String, String>{
       'Content-Type': 'application/json',
-      if (!vertex) 'x-goog-api-key': key,
+      'x-goog-api-key': key,
     };
     final gen = <String, dynamic>{
-      'temperature': 0.9,
+      if (!model.startsWith('gemini-3') && !model.startsWith('gemini-4'))
+        'temperature': 0.9,
       'maxOutputTokens': maxTokens,
     };
+    if (model.startsWith('gemini-3') || model.startsWith('gemini-4')) {
+      gen['thinkingConfig'] = {'thinkingLevel': 'low'};
+    }
     // Thinking tokens would eat the output budget and slow replies down.
     if (model.contains('2.5-flash')) {
       gen['thinkingConfig'] = {'thinkingBudget': 0};
@@ -186,7 +195,7 @@ class AiService {
     };
     final res = await client
         .post(uri, headers: headers, body: jsonEncode(body))
-        .timeout(_timeout);
+        .timeout(requestTimeout);
     final raw = utf8.decode(res.bodyBytes);
     if (res.statusCode != 200) return _Raw(null, res.statusCode, raw);
     final data = jsonDecode(raw);
@@ -246,7 +255,7 @@ class AiService {
             'temperature': 0.9,
           }),
         )
-        .timeout(_timeout);
+        .timeout(requestTimeout);
     final raw = utf8.decode(res.bodyBytes);
     if (res.statusCode != 200) return _Raw(null, res.statusCode, raw);
     final data = jsonDecode(raw);
@@ -258,6 +267,47 @@ class AiService {
     return _Raw(out, 200, '');
   }
 
+  static Future<_Raw> _managed(
+    List<Map<String, dynamic>> contents,
+    Map<String, dynamic>? context,
+  ) async {
+    final messages = <Map<String, String>>[];
+    for (final c in contents.skip(
+      contents.length > 8 ? contents.length - 8 : 0,
+    )) {
+      final text =
+          (c['parts'] as List).map((p) => p['text'] ?? '').join('\n').trim();
+      if (text.isEmpty || (messages.isEmpty && c['role'] != 'user')) continue;
+      messages.add({
+        'role': c['role'] == 'model' ? 'model' : 'user',
+        'text': text.length > 1000 ? text.substring(0, 1000) : text,
+      });
+    }
+    final body =
+        context == null
+            ? {'mode': 'ping'}
+            : {'mode': 'dialog', 'context': context, 'messages': messages};
+    final response = await client
+        .post(
+          Uri.parse(managedUrl),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(body),
+        )
+        .timeout(requestTimeout);
+    if (response.statusCode != 200) {
+      return _Raw(
+        null,
+        response.statusCode,
+        'TechLife AI HTTP ${response.statusCode}',
+      );
+    }
+    final data = jsonDecode(utf8.decode(response.bodyBytes));
+    final text = data is Map ? (data['text'] as String? ?? '').trim() : '';
+    return text.isEmpty
+        ? _Raw(null, 502, 'Empty TechLife AI reply')
+        : _Raw(text, 200, '');
+  }
+
   // ----------------------------------------------------------------- core
   static Future<AiResult> _call({
     required String apiKey,
@@ -265,6 +315,7 @@ class AiService {
     required List<Map<String, dynamic>> contents,
     int maxTokens = 1024,
     bool force = false,
+    Map<String, dynamic>? managedContext,
   }) async {
     final sw = Stopwatch()..start();
     final key = apiKey.trim();
@@ -273,7 +324,7 @@ class AiService {
     if (!force && paused) {
       return AiResult('', false, 'ИИ на паузе: $_pauseReason', 0);
     }
-    if (!hasCustom && key.isEmpty) {
+    if (!hasManaged && !hasCustom && key.isEmpty) {
       const err = 'нет API-ключа (ни встроенного, ни введённого в настройках)';
       AppLog.I.error('ai', err);
       return const AiResult('', false, err, 0);
@@ -282,23 +333,24 @@ class AiService {
     final secrets = [key, customKey.trim()];
     final errors = <String>[];
 
-    // Which transports to try, in order.
-    final List<String> plan;
-    if (hasCustom) {
-      plan = ['custom'];
-    } else if (isVertexKey(key)) {
-      plan = lastGood == 'gemini' ? ['gemini', 'vertex'] : ['vertex', 'gemini'];
-    } else if (key.startsWith('AIza')) {
-      plan = ['gemini'];
-    } else {
-      plan = lastGood == 'vertex' ? ['vertex', 'gemini'] : ['gemini', 'vertex'];
-    }
+    // No cross-service fallback: permissions and enabled APIs are different.
+    final plan = [
+      hasManaged
+          ? 'managed'
+          : hasCustom
+          ? 'custom'
+          : googleEndpoint == 'vertex'
+          ? 'vertex'
+          : 'gemini',
+    ];
 
     var allConfig = true;
     for (final ep in plan) {
       try {
         final r =
-            ep == 'custom'
+            ep == 'managed'
+                ? await _managed(contents, managedContext)
+                : ep == 'custom'
                 ? await _openAi(model, system, contents, maxTokens)
                 : await _google(ep, key, model, system, contents, maxTokens);
         if (r.text != null) {
@@ -324,6 +376,11 @@ class AiService {
           allConfig = false;
           errors.add('$ep: ${r.body}');
         }
+      } on TimeoutException {
+        allConfig = false;
+        errors.add(
+          '$ep: нет ответа за ${requestTimeout.inSeconds} секунд. Проверьте сеть и доступ к выбранному API; можно повторить тест.',
+        );
       } catch (e) {
         allConfig = false;
         errors.add('$ep: ${_redact(e.toString(), secrets)}');
@@ -352,6 +409,7 @@ class AiService {
     required String hint,
     required String offlineKey,
     double? number,
+    Map<String, dynamic>? managedContext,
   }) async {
     final contents = <Map<String, dynamic>>[];
     for (final m in history.skip(
@@ -380,10 +438,24 @@ class AiService {
         0,
       );
     }
+    final managedContents = [
+      for (final c in contents)
+        {
+          'role': c['role'],
+          'parts': [
+            for (final p in c['parts'] as List) {'text': p['text']},
+          ],
+        },
+    ];
     final lp = (contents.last['parts'] as List)[0] as Map;
     lp['text'] = '${lp['text']}\n\n$hint';
 
-    final r = await _call(apiKey: apiKey, system: persona, contents: contents);
+    final r = await _call(
+      apiKey: apiKey,
+      system: persona,
+      contents: hasManaged ? managedContents : contents,
+      managedContext: managedContext,
+    );
     if (r.ok) return r;
     return AiResult(offline(offlineKey, number), false, r.error, r.ms);
   }
@@ -402,7 +474,7 @@ class AiService {
           ],
         },
       ],
-      maxTokens: 256,
+      maxTokens: 1024,
       force: true,
     );
   }

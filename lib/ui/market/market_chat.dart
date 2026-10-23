@@ -273,14 +273,14 @@ class _MarketChatState extends State<MarketChat> {
             },
           ),
         ),
-        if (gs.aiKey.isEmpty || !gs.online)
+        if (!gs.online || d.messages.lastOrNull?.fallback == true)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
             child: Text(
               mt(
-                'Работают игровые ответы. Для Gemini: Профиль → Настроить Gemini.',
-                'Using offline replies. For Gemini: Profile → Configure Gemini.',
-                'Працюють ігрові відповіді. Gemini: Профіль → Налаштувати Gemini.',
+                'Сейчас работают игровые ответы. ИИ подключится автоматически, когда сервис станет доступен.',
+                'Using offline replies. AI will reconnect automatically when the service is available.',
+                'Зараз працюють ігрові відповіді. ШІ підключиться автоматично, коли сервіс стане доступним.',
               ),
               style: const TextStyle(fontSize: 10, color: Colors.blueGrey),
             ),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/game_state.dart';
 import 'market_chat.dart';
+import '../../core/ai_service.dart';
+import '../../core/admin_auth.dart';
 import '../../core/models.dart';
 import '../../core/market/device_catalog.dart';
 import '../../core/market/market_models.dart';
@@ -920,24 +922,68 @@ class _MarketplaceAppState extends State<MarketplaceApp> {
       _section('Gemini AI'),
       Text(
         mt(
-          'Продавцы и покупатели отвечают с учётом модели, поломки и истории переписки. Добавь свой ключ для живых ответов.',
-          'Sellers and buyers use the model, fault and chat history. Add your API key for live AI replies.',
-          'Продавці та покупці враховують модель, поломку й історію розмови. Додай ключ для живих відповідей.',
+          'Продавцы и покупатели отвечают с учётом модели, поломки и истории переписки. ИИ подключается автоматически.',
+          'Sellers and buyers use the model, fault and chat history. AI connects automatically.',
+          'Продавці та покупці враховують модель, поломку й історію розмови. ШІ підключається автоматично.',
         ),
         style: const TextStyle(fontSize: 13, color: Colors.blueGrey),
       ),
       const SizedBox(height: 12),
       FilledButton.icon(
-        onPressed:
-            () => showDialog<void>(
-              context: context,
-              builder: (c) => GeminiSetupDialog(gs: gs),
-            ),
+        onPressed: () async {
+          final r = await gs.adminTestAi();
+          if (mounted) {
+            toast(
+              context,
+              r.ok
+                  ? mt(
+                    'ИИ готов к работе',
+                    'AI is ready',
+                    'ШІ готовий до роботи',
+                  )
+                  : mt(
+                    'Сервис временно недоступен. Работают игровые ответы.',
+                    'Service temporarily unavailable. Using offline replies.',
+                    'Сервіс тимчасово недоступний. Працюють ігрові відповіді.',
+                  ),
+            );
+          }
+        },
         icon: const Icon(Icons.auto_awesome),
-        label: Text(
-          mt('Настроить Gemini', 'Configure Gemini', 'Налаштувати Gemini'),
-        ),
+        label: Text(mt('Проверить ИИ', 'Check AI', 'Перевірити ШІ')),
       ),
+      if (AdminAuth.unlocked) ...[
+        TextButton(
+          onPressed: () {
+            gs.useAutomaticAi();
+            toast(
+              context,
+              mt(
+                'Автоматический ИИ включён',
+                'Automatic AI enabled',
+                'Автоматичний ШІ ввімкнено',
+              ),
+            );
+          },
+          child: Text(
+            mt('Автоматический ИИ', 'Automatic AI', 'Автоматичний ШІ'),
+          ),
+        ),
+        TextButton(
+          onPressed:
+              () => showDialog<void>(
+                context: context,
+                builder: (_) => GeminiSetupDialog(gs: gs),
+              ),
+          child: Text(
+            mt(
+              'Свой API · администратор',
+              'Custom API · administrator',
+              'Власний API · адміністратор',
+            ),
+          ),
+        ),
+      ],
       OutlinedButton(
         onPressed: () => context.read<Shell>().open('settings'),
         child: Text(mt('Настройки игры', 'Game settings', 'Налаштування гри')),
@@ -992,8 +1038,10 @@ class GeminiSetupDialog extends StatefulWidget {
 class _GeminiSetupDialogState extends State<GeminiSetupDialog> {
   late final keyCtrl = TextEditingController(text: widget.gs.geminiKey);
   late final modelCtrl = TextEditingController(
-    text: widget.gs.aiModel.isEmpty ? 'gemini-3.8-flash' : widget.gs.aiModel,
+    text:
+        widget.gs.aiModel.isEmpty ? AiService.defaultModel : widget.gs.aiModel,
   );
+  late String endpoint = widget.gs.aiEndpoint;
   bool busy = false;
   String? result;
   @override
@@ -1019,6 +1067,44 @@ class _GeminiSetupDialogState extends State<GeminiSetupDialog> {
             ),
           ),
           const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            initialValue: endpoint,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'Google API'),
+            items: const [
+              DropdownMenuItem(
+                value: 'gemini',
+                child: Text(
+                  'Gemini API · AI Studio',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              DropdownMenuItem(
+                value: 'vertex',
+                child: Text(
+                  'Vertex / Agent Platform Express',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+            onChanged:
+                busy
+                    ? null
+                    : (v) {
+                      if (v != null) setState(() => endpoint = v);
+                    },
+          ),
+          const SizedBox(height: 8),
+          Text(
+            mt(
+              'AI Studio → Gemini API. Ключ Cloud Express → Vertex. Доступ к API должен быть включён в проекте ключа.',
+              'AI Studio → Gemini API. Cloud Express key → Vertex. Enable the selected API in the key’s project.',
+              'AI Studio → Gemini API. Ключ Cloud Express → Vertex. Обраний API має бути ввімкнений у проєкті ключа.',
+            ),
+            style: const TextStyle(fontSize: 11),
+          ),
           TextField(
             controller: keyCtrl,
             obscureText: true,
@@ -1052,6 +1138,8 @@ class _GeminiSetupDialogState extends State<GeminiSetupDialog> {
             busy
                 ? null
                 : () async {
+                  widget.gs.setAiProvider('', '', '');
+                  widget.gs.setGoogleEndpoint(endpoint);
                   widget.gs.setKey(keyCtrl.text);
                   widget.gs.setAiModel(modelCtrl.text);
                   setState(() => busy = true);
@@ -1077,6 +1165,8 @@ class _GeminiSetupDialogState extends State<GeminiSetupDialog> {
             busy
                 ? null
                 : () {
+                  widget.gs.setAiProvider('', '', '');
+                  widget.gs.setGoogleEndpoint(endpoint);
                   widget.gs.setKey(keyCtrl.text);
                   widget.gs.setAiModel(modelCtrl.text);
                   Navigator.pop(context);

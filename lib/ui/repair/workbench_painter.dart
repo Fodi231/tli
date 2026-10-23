@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import '../../core/repair/repair_session.dart';
 import '../../core/repair/repair_strings.dart';
 import 'workbench_geometry.dart';
+import 'model_artwork.dart';
+import '../../core/repair/device_profile.dart';
 
 const benchBlue = Color(0xFF57C5FF);
 const benchGreen = Color(0xFF65E6AE);
@@ -30,6 +32,9 @@ class WorkbenchPainter extends CustomPainter {
     this.dragTarget,
     this.dragPosition,
   });
+
+  DeviceProfile get profile => profileFor(session.device);
+  ModelArtwork get art => ModelArtwork(profile);
 
   double fit(Size size) => math.min(
     size.width / geometry.size.width,
@@ -78,7 +83,7 @@ class WorkbenchPainter extends CustomPainter {
     );
     _text(
       canvas,
-      rt('r_display_place'),
+      rt(profile.rearAccess ? 'r_cover_place' : 'r_display_place'),
       Offset(g.parkedDisplay.center.dx, g.parkedDisplay.bottom + 20),
       11,
       Colors.white54,
@@ -86,15 +91,23 @@ class WorkbenchPainter extends CustomPainter {
       spacing: 1.5,
     );
     _body(canvas);
-    final noScreen = s.service == 'display' && s.partRemoved;
+    final noScreen =
+        !profile.rearAccess && s.service == 'display' && s.partRemoved;
     if (s.isOpen && !noScreen && dragTarget != 'screen') {
       _displayBack(
         canvas,
         g.parkedDisplay,
         fresh: s.newPartInstalled && s.service == 'display',
+        cover: profile.rearAccess,
       );
     }
-    if (s.isOpen && !s.done('part_off')) _flex(canvas);
+    if (s.isOpen &&
+        !profile.rearAccess &&
+        !((s.service == 'display' || s.service == 'battery') &&
+            s.done('part_off') &&
+            !s.done('part_on'))) {
+      _flex(canvas);
+    }
     if (!s.newPartInstalled &&
         s.service != 'diag' &&
         dragTarget != 'new_part') {
@@ -118,7 +131,9 @@ class WorkbenchPainter extends CustomPainter {
     // Collected screws are physical marks in the tray, independent of the HUD.
     final count =
         (s.done('frame_out') && !s.done('frame_in') ? 2 : 0) +
-        (s.done('shield_screws_out') && !s.done('shield_screws_in') ? 3 : 0);
+        (s.done('shield_screws_out') && !s.done('shield_screws_in')
+            ? profile.shieldScrews
+            : 0);
     for (var i = 0; i < count; i++) {
       _screw(canvas, g.partsTray.topLeft + Offset(25 + i * 19, 44), .7);
     }
@@ -139,9 +154,16 @@ class WorkbenchPainter extends CustomPainter {
           ..color = Colors.black38
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12),
       );
-      if (dragTarget == 'screen') {
+      if (dragTarget == 'front_display') {
+        _displayBack(canvas, r, fresh: s.newPartInstalled);
+      } else if (dragTarget == 'screen') {
         if (s.isOpen) {
-          _displayBack(canvas, r, fresh: s.newPartInstalled);
+          _displayBack(
+            canvas,
+            r,
+            fresh: s.newPartInstalled,
+            cover: profile.rearAccess,
+          );
         } else {
           _screen(canvas, r, cracked: s.service == 'display');
         }
@@ -264,8 +286,10 @@ class WorkbenchPainter extends CustomPainter {
       ),
       Paint()..color = const Color(0xFFB0B6C3),
     );
-    if (!s.isOpen) {
-      if (dragTarget != 'screen') {
+    if (!s.isOpen || s.frontFacing) {
+      if (dragTarget != 'screen' &&
+          dragTarget != 'front_display' &&
+          !(s.frontFacing && s.partRemoved)) {
         _screen(
           c,
           p.deflate(9),
@@ -273,50 +297,7 @@ class WorkbenchPainter extends CustomPainter {
         );
       }
     } else {
-      // Motherboard, shielding cans and fine traces.
-      final board = Rect.fromLTWH(p.left + 147, p.top + 34, 56, 335);
-      c.drawRRect(
-        RRect.fromRectAndRadius(board, const Radius.circular(7)),
-        Paint()..color = const Color(0xFF14332F),
-      );
-      final trace =
-          Paint()
-            ..color = const Color(0xFFB69E62).withValues(alpha: .6)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.2;
-      for (var i = 0; i < 11; i++) {
-        final y = p.top + 55 + i * 25;
-        final path =
-            Path()
-              ..moveTo(p.left + 151, y.toDouble())
-              ..lineTo(p.left + 165, y.toDouble())
-              ..lineTo(p.left + 174, y + 8)
-              ..lineTo(p.left + 197, y + 8);
-        c.drawPath(path, trace);
-        c.drawCircle(
-          Offset(p.left + 198, y + 8),
-          2.4,
-          Paint()..color = const Color(0xFFD3BB77),
-        );
-      }
-      for (var i = 0; i < 4; i++) {
-        final chip = Rect.fromLTWH(p.left + 157, p.top + 50 + i * 38, 36, 26);
-        c.drawRRect(
-          RRect.fromRectAndRadius(chip, const Radius.circular(3)),
-          Paint()
-            ..shader = const LinearGradient(
-              colors: [Color(0xFFA1A8A7), Color(0xFF535C60)],
-            ).createShader(chip),
-        );
-        _text(
-          c,
-          'TL ${120 + i}',
-          chip.center,
-          6,
-          Colors.black54,
-          centered: true,
-        );
-      }
+      art.underlay(c, p);
       for (final part in ['battery', 'camera', 'port']) {
         if (!(s.service == part && s.partRemoved) && dragTarget != part) {
           _component(
@@ -332,7 +313,12 @@ class WorkbenchPainter extends CustomPainter {
           );
         }
       }
-      for (final id in ['battery_connector', 'part_connector']) {
+      art.cables(c, p, s);
+      for (final id in [
+        'battery_connector',
+        'part_connector',
+        if (profile.rearAccess) 'interconnect_1',
+      ]) {
         final disconnected =
             id == 'battery_connector'
                 ? s.batteryDisconnected
@@ -362,7 +348,7 @@ class WorkbenchPainter extends CustomPainter {
       if (!s.shieldRemoved && dragTarget != 'shield') {
         _shield(c, g.rect('shield', s));
       }
-      for (var i = 0; i < 3; i++) {
+      for (var i = 0; i < profile.shieldScrews; i++) {
         final id = 'shield_$i';
         final absent =
             s.done('shield_screws_out') && !s.done('shield_screws_in');
@@ -384,17 +370,21 @@ class WorkbenchPainter extends CustomPainter {
         }
       }
       if (s.service == 'battery' && !s.done('adhesive_out')) {
-        for (var i = 0; i < 2; i++) {
+        for (var i = 0; i < profile.adhesiveTabs; i++) {
           final id = 'adhesive_$i';
           if (s.targetDone(id) || dragTarget == id) continue;
           c.drawRRect(
             RRect.fromRectAndRadius(g.rect(id, s), const Radius.circular(5)),
-            Paint()..color = const Color(0xFFEBE0CF),
+            Paint()
+              ..color =
+                  profile.id == 'galaxys23'
+                      ? const Color(0xFF6696BB)
+                      : const Color(0xFFEBE0CF),
           );
         }
       }
     }
-    for (var i = 0; i < 2; i++) {
+    for (var i = 0; i < (profile.frameScrews ? 2 : 0); i++) {
       final id = 'frame_$i';
       if (!(s.done('frame_out') && !s.done('frame_in')) ||
           s.current?.id == 'frame_in') {
@@ -407,6 +397,10 @@ class WorkbenchPainter extends CustomPainter {
 
   void _screen(Canvas c, Rect r, {bool cracked = false}) {
     final s = session;
+    if (profile.rearAccess && !s.powered && !s.frontFacing) {
+      art.rearCover(c, r);
+      return;
+    }
     c.drawRRect(
       RRect.fromRectAndRadius(r, const Radius.circular(27)),
       Paint()..color = Colors.black,
@@ -544,7 +538,16 @@ class WorkbenchPainter extends CustomPainter {
     }
   }
 
-  void _displayBack(Canvas c, Rect r, {required bool fresh}) {
+  void _displayBack(
+    Canvas c,
+    Rect r, {
+    required bool fresh,
+    bool cover = false,
+  }) {
+    if (cover) {
+      art.rearCover(c, r, inside: true);
+      return;
+    }
     final k = math.min(1.0, r.width / 224);
     final radius = Radius.circular(28 * k);
     c.drawRRect(
@@ -585,7 +588,7 @@ class WorkbenchPainter extends CustomPainter {
     }
     _text(
       c,
-      fresh ? 'OLED · QC OK' : 'OLED',
+      '${profile.id == 'iphone11' ? 'LCD' : 'OLED'}${fresh ? ' · QC OK' : ''}',
       r.center,
       12 * k,
       fresh ? benchGreen : Colors.white30,
@@ -596,7 +599,22 @@ class WorkbenchPainter extends CustomPainter {
 
   void _component(Canvas c, String type, Rect r, {required bool fresh}) {
     if (r.width <= 0 || r.height <= 0) return;
-    final color = fresh ? benchGreen : const Color(0xFFCF9882);
+    if (type != 'display') {
+      final b =
+          type == 'battery'
+              ? profile.battery
+              : type == 'camera'
+              ? profile.camera
+              : profile.port;
+      final w = math.min(r.width, r.height * b.w / b.h);
+      final fitted = Rect.fromCenter(
+        center: r.center,
+        width: w,
+        height: w * b.h / b.w,
+      );
+      art.part(c, type, fitted, fresh: fresh);
+      return;
+    }
     switch (type) {
       case 'display':
         final landscape = r.width > r.height;
@@ -616,146 +634,15 @@ class WorkbenchPainter extends CustomPainter {
         );
         c.restore();
         break;
-      case 'battery':
-        c.drawRRect(
-          RRect.fromRectAndRadius(r, const Radius.circular(8)),
-          Paint()
-            ..shader = const LinearGradient(
-              colors: [Color(0xFF35373B), Color(0xFF111418)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ).createShader(r),
-        );
-        c.drawRRect(
-          RRect.fromRectAndRadius(r.deflate(3), const Radius.circular(6)),
-          Paint()
-            ..color = Colors.white12
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1,
-        );
-        if (r.height > 110) {
-          _text(
-            c,
-            'Li-ion',
-            r.center - const Offset(0, 32),
-            16,
-            Colors.white60,
-            centered: true,
-          );
-          _text(
-            c,
-            '3.85V  •  12.4Wh',
-            r.center + const Offset(0, 4),
-            8,
-            Colors.white30,
-            centered: true,
-          );
-          _text(
-            c,
-            '+  Li  −',
-            r.center + const Offset(0, 34),
-            20,
-            Colors.white38,
-            centered: true,
-          );
-          _text(
-            c,
-            'TECHLIFE',
-            r.bottomCenter - const Offset(0, 30),
-            9,
-            color,
-            centered: true,
-            spacing: 1.5,
-          );
-        } else {
-          _text(c, 'Li-ion', r.center, 15, color, centered: true);
-        }
-        break;
-      case 'camera':
-        c.drawRRect(
-          RRect.fromRectAndRadius(r, const Radius.circular(13)),
-          Paint()
-            ..shader = const LinearGradient(
-              colors: [Color(0xFF6F7680), Color(0xFF202832)],
-            ).createShader(r),
-        );
-        for (final pos in [
-          Offset(r.left + r.width * .3, r.top + r.height * .32),
-          Offset(r.left + r.width * .7, r.top + r.height * .7),
-        ]) {
-          final radius = math.min(r.width, r.height) * .235;
-          c.drawCircle(
-            pos,
-            radius + 3,
-            Paint()..color = const Color(0xFFB0ADB3),
-          );
-          c.drawCircle(
-            pos,
-            radius,
-            Paint()
-              ..shader = const RadialGradient(
-                colors: [
-                  Color(0xFF245779),
-                  Color(0xFF070D16),
-                  Color(0xFF29455E),
-                ],
-              ).createShader(Rect.fromCircle(center: pos, radius: radius)),
-          );
-          c.drawCircle(
-            pos - Offset(radius * .3, radius * .3),
-            radius * .2,
-            Paint()..color = const Color(0xFF96CDDE).withValues(alpha: .7),
-          );
-        }
-        break;
-      case 'port':
-        final board = Rect.fromCenter(
-          center: r.center,
-          width: r.width,
-          height: math.min(30, r.height),
-        );
-        c.drawRRect(
-          RRect.fromRectAndRadius(board, const Radius.circular(5)),
-          Paint()..color = const Color(0xFFA0733D),
-        );
-        final port = Rect.fromCenter(
-          center: board.center,
-          width: board.width * .3,
-          height: board.height * .8,
-        );
-        c.drawRRect(
-          RRect.fromRectAndRadius(port, const Radius.circular(5)),
-          Paint()..color = const Color(0xFFB3B8BF),
-        );
-        c.drawRRect(
-          RRect.fromRectAndRadius(port.deflate(4), const Radius.circular(3)),
-          Paint()..color = const Color(0xFF101820),
-        );
-        for (var i = 0; i < 4; i++) {
-          c.drawCircle(
-            board.topLeft + Offset(9 + i * 13, board.height / 2),
-            3,
-            Paint()..color = const Color(0xFFE2C785),
-          );
-        }
-        break;
     }
   }
 
   void _shield(Canvas c, Rect r) {
-    c.drawRRect(
-      RRect.fromRectAndRadius(r, const Radius.circular(5)),
-      Paint()
-        ..shader = const LinearGradient(
-          colors: [Color(0xFFB6BBC0), Color(0xFF646C76), Color(0xFFB7B8B9)],
-        ).createShader(r),
-    );
-    c.drawLine(
-      r.topLeft + const Offset(4, 10),
-      r.bottomRight - const Offset(4, 10),
-      Paint()
-        ..color = Colors.white24
-        ..strokeWidth = 1,
+    final b = profile.shield;
+    final w = math.min(r.width, r.height * b.w / b.h);
+    art.shield(
+      c,
+      Rect.fromCenter(center: r.center, width: w, height: w * b.h / b.w),
     );
   }
 
@@ -785,7 +672,10 @@ class WorkbenchPainter extends CustomPainter {
 
   void _flex(Canvas c) {
     final g = geometry;
-    final start = g.rect('part_connector', session).center;
+    final socket = profile.connector('display');
+    final start =
+        g.phone.topLeft +
+        Offset(socket.x + socket.w / 2, socket.y + socket.h / 2);
     final end = g.parkedDisplay.centerLeft + const Offset(12, 25);
     final path =
         Path()

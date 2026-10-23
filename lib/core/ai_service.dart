@@ -22,8 +22,16 @@ class AiPreset {
 
 const aiPresets = <AiPreset>[
   AiPreset('Groq', 'https://api.groq.com/openai/v1', 'llama-3.1-8b-instant'),
-  AiPreset('OpenRouter', 'https://openrouter.ai/api/v1', 'meta-llama/llama-3.3-70b-instruct:free'),
-  AiPreset('Gemini (AIza)', 'https://generativelanguage.googleapis.com/v1beta/openai', 'gemini-2.5-flash'),
+  AiPreset(
+    'OpenRouter',
+    'https://openrouter.ai/api/v1',
+    'meta-llama/llama-3.3-70b-instruct:free',
+  ),
+  AiPreset(
+    'Gemini (AIza)',
+    'https://generativelanguage.googleapis.com/v1beta/openai',
+    'gemini-3.8-flash',
+  ),
 ];
 
 /// AI client for the in-game dialogs.
@@ -41,6 +49,8 @@ const aiPresets = <AiPreset>[
 /// reason goes to the admin log. After a configuration error (401/403/404) the
 /// AI is paused for a short time so the player does not wait on every message.
 class AiService {
+  /// Injectable transport for deterministic API tests.
+  static http.Client client = http.Client();
   static String? modelOverride;
 
   // Custom OpenAI-compatible provider (empty url = use Google).
@@ -56,7 +66,11 @@ class AiService {
 
   static DateTime? _pausedUntil;
   static String? _pauseReason;
-  static const _langNames = {'ru': 'Russian', 'en': 'English', 'uk': 'Ukrainian'};
+  static const _langNames = {
+    'ru': 'Russian',
+    'en': 'English',
+    'uk': 'Ukrainian',
+  };
   static const _timeout = Duration(seconds: 12);
 
   static String langName(String lang) => _langNames[lang] ?? 'English';
@@ -75,17 +89,21 @@ class AiService {
   }
 
   static String modelFor(String key) {
-    if (hasCustom) return customModel.trim().isEmpty ? 'gpt-4o-mini' : customModel.trim();
+    if (hasCustom) {
+      return customModel.trim().isEmpty ? 'gpt-4o-mini' : customModel.trim();
+    }
     final o = modelOverride?.trim();
     if (o != null && o.isNotEmpty) return o;
-    return isVertexKey(key) ? 'gemini-2.5-flash' : 'gemini-flash-latest';
+    return 'gemini-3.8-flash';
   }
 
-  static String offline(String key, double? number) =>
-      I18n.t(key).replaceAll('{p}', number == null ? '' : number.toInt().toString());
+  static String offline(String key, double? number) => I18n.t(
+    key,
+  ).replaceAll('{p}', number == null ? '' : number.toInt().toString());
 
   /// Stops AI calls for [pauseSeconds] (used after a configuration error).
-  static bool get paused => _pausedUntil != null && DateTime.now().isBefore(_pausedUntil!);
+  static bool get paused =>
+      _pausedUntil != null && DateTime.now().isBefore(_pausedUntil!);
   static String? get pauseReason => paused ? _pauseReason : null;
   static void resume() {
     _pausedUntil = null;
@@ -115,7 +133,9 @@ class AiService {
   }
 
   static void _grabFixUrl(String raw) {
-    final m = RegExp(r'https://console\.(?:developers|cloud)\.google\.com/[^\s"\\<>]+').firstMatch(raw);
+    final m = RegExp(
+      r'https://console\.(?:developers|cloud)\.google\.com/[^\s"\\<>]+',
+    ).firstMatch(raw);
     if (m != null) {
       var u = m.group(0)!;
       while (u.isNotEmpty && '.,;)'.contains(u[u.length - 1])) {
@@ -126,44 +146,83 @@ class AiService {
   }
 
   // ------------------------------------------------------------ transports
-  static Future<_Raw> _google(String ep, String key, String model, String system, List<Map<String, dynamic>> contents, int maxTokens) async {
+  static Future<_Raw> _google(
+    String ep,
+    String key,
+    String model,
+    String system,
+    List<Map<String, dynamic>> contents,
+    int maxTokens,
+  ) async {
     final vertex = ep == 'vertex';
-    final uri = vertex
-        ? Uri.parse('https://aiplatform.googleapis.com/v1/publishers/google/models/$model:generateContent?key=$key')
-        : Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent');
+    final uri =
+        vertex
+            ? Uri.parse(
+              'https://aiplatform.googleapis.com/v1/publishers/google/models/$model:generateContent?key=$key',
+            )
+            : Uri.parse(
+              'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent',
+            );
     final headers = <String, String>{
       'Content-Type': 'application/json',
       if (!vertex) 'x-goog-api-key': key,
     };
-    final gen = <String, dynamic>{'temperature': 0.9, 'maxOutputTokens': maxTokens};
+    final gen = <String, dynamic>{
+      'temperature': 0.9,
+      'maxOutputTokens': maxTokens,
+    };
     // Thinking tokens would eat the output budget and slow replies down.
-    if (model.contains('2.5-flash')) gen['thinkingConfig'] = {'thinkingBudget': 0};
+    if (model.contains('2.5-flash')) {
+      gen['thinkingConfig'] = {'thinkingBudget': 0};
+    }
     final body = {
       'systemInstruction': {
         'parts': [
-          {'text': system}
-        ]
+          {'text': system},
+        ],
       },
       'contents': contents,
       'generationConfig': gen,
     };
-    final res = await http.post(uri, headers: headers, body: jsonEncode(body)).timeout(_timeout);
+    final res = await client
+        .post(uri, headers: headers, body: jsonEncode(body))
+        .timeout(_timeout);
     final raw = utf8.decode(res.bodyBytes);
     if (res.statusCode != 200) return _Raw(null, res.statusCode, raw);
     final data = jsonDecode(raw);
     final cand = (data['candidates'] as List?)?.firstOrNull;
     final parts = cand?['content']?['parts'] as List?;
-    final out = parts == null ? '' : parts.map((p) => (p['text'] ?? '').toString()).join().trim();
-    if (out.isEmpty) return _Raw(null, 200, 'пустой ответ, finishReason=${cand?['finishReason']}');
+    final out =
+        parts == null
+            ? ''
+            : parts
+                .where((p) => p['thought'] != true)
+                .map((p) => (p['text'] ?? '').toString())
+                .join()
+                .trim();
+    if (out.isEmpty) {
+      return _Raw(
+        null,
+        200,
+        'пустой ответ, finishReason=${cand?['finishReason']}',
+      );
+    }
     return _Raw(out, 200, '');
   }
 
-  static Future<_Raw> _openAi(String model, String system, List<Map<String, dynamic>> contents, int maxTokens) async {
+  static Future<_Raw> _openAi(
+    String model,
+    String system,
+    List<Map<String, dynamic>> contents,
+    int maxTokens,
+  ) async {
     var base = customUrl.trim();
     while (base.endsWith('/')) {
       base = base.substring(0, base.length - 1);
     }
-    final uri = Uri.parse(base.endsWith('/chat/completions') ? base : '$base/chat/completions');
+    final uri = Uri.parse(
+      base.endsWith('/chat/completions') ? base : '$base/chat/completions',
+    );
     final msgs = <Map<String, String>>[
       {'role': 'system', 'content': system},
       for (final c in contents)
@@ -172,20 +231,29 @@ class AiService {
           'content': ((c['parts'] as List)[0] as Map)['text'].toString(),
         },
     ];
-    final res = await http
+    final res = await client
         .post(
           uri,
           headers: {
             'Content-Type': 'application/json',
-            if (customKey.trim().isNotEmpty) 'Authorization': 'Bearer ${customKey.trim()}',
+            if (customKey.trim().isNotEmpty)
+              'Authorization': 'Bearer ${customKey.trim()}',
           },
-          body: jsonEncode({'model': model, 'messages': msgs, 'max_tokens': maxTokens, 'temperature': 0.9}),
+          body: jsonEncode({
+            'model': model,
+            'messages': msgs,
+            'max_tokens': maxTokens,
+            'temperature': 0.9,
+          }),
         )
         .timeout(_timeout);
     final raw = utf8.decode(res.bodyBytes);
     if (res.statusCode != 200) return _Raw(null, res.statusCode, raw);
     final data = jsonDecode(raw);
-    final out = ((data['choices'] as List?)?.firstOrNull?['message']?['content'] ?? '').toString().trim();
+    final out =
+        ((data['choices'] as List?)?.firstOrNull?['message']?['content'] ?? '')
+            .toString()
+            .trim();
     if (out.isEmpty) return _Raw(null, 200, 'пустой ответ');
     return _Raw(out, 200, '');
   }
@@ -229,9 +297,10 @@ class AiService {
     var allConfig = true;
     for (final ep in plan) {
       try {
-        final r = ep == 'custom'
-            ? await _openAi(model, system, contents, maxTokens)
-            : await _google(ep, key, model, system, contents, maxTokens);
+        final r =
+            ep == 'custom'
+                ? await _openAi(model, system, contents, maxTokens)
+                : await _google(ep, key, model, system, contents, maxTokens);
         if (r.text != null) {
           sw.stop();
           if (!hasCustom) lastGood = ep;
@@ -242,9 +311,15 @@ class AiService {
         }
         if (r.status != 200) {
           _grabFixUrl(r.body);
-          final isCfg = r.status == 400 || r.status == 401 || r.status == 403 || r.status == 404;
+          final isCfg =
+              r.status == 400 ||
+              r.status == 401 ||
+              r.status == 403 ||
+              r.status == 404;
           if (!isCfg) allConfig = false;
-          errors.add('$ep: HTTP ${r.status} ${_redact(_short(r.body), secrets)}');
+          errors.add(
+            '$ep: HTTP ${r.status} ${_redact(_short(r.body), secrets)}',
+          );
         } else {
           allConfig = false;
           errors.add('$ep: ${r.body}');
@@ -261,7 +336,10 @@ class AiService {
     if (config && !force) {
       _pausedUntil = DateTime.now().add(const Duration(minutes: 2));
       _pauseReason = errors.isEmpty ? 'ошибка настройки' : errors.first;
-      AppLog.I.warn('ai', 'ИИ приостановлен на 2 минуты (ошибка настройки). Проверьте ключ в админ-панели.');
+      AppLog.I.warn(
+        'ai',
+        'ИИ приостановлен на 2 минуты (ошибка настройки). Проверьте ключ в админ-панели.',
+      );
     }
     return AiResult('', false, err, sw.elapsedMilliseconds);
   }
@@ -276,7 +354,9 @@ class AiService {
     double? number,
   }) async {
     final contents = <Map<String, dynamic>>[];
-    for (final m in history) {
+    for (final m in history.skip(
+      history.length > 24 ? history.length - 24 : 0,
+    )) {
       final role = m.mine ? 'user' : 'model';
       if (contents.isEmpty && role == 'model') continue; // must start with user
       if (contents.isNotEmpty && contents.last['role'] == role) {
@@ -287,13 +367,18 @@ class AiService {
         contents.add({
           'role': role,
           'parts': [
-            {'text': m.text}
+            {'text': m.text},
           ],
         });
       }
     }
     if (contents.isEmpty || contents.last['role'] != 'user') {
-      return AiResult(offline(offlineKey, number), false, 'пустая история диалога', 0);
+      return AiResult(
+        offline(offlineKey, number),
+        false,
+        'пустая история диалога',
+        0,
+      );
     }
     final lp = (contents.last['parts'] as List)[0] as Map;
     lp['text'] = '${lp['text']}\n\n$hint';
@@ -313,9 +398,9 @@ class AiService {
         {
           'role': 'user',
           'parts': [
-            {'text': 'Say hello in Russian.'}
-          ]
-        }
+            {'text': 'Say hello in Russian.'},
+          ],
+        },
       ],
       maxTokens: 256,
       force: true,

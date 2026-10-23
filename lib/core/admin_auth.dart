@@ -11,8 +11,8 @@ import 'app_log.dart';
 /// (see README). Five wrong attempts lock the form for 60 seconds.
 class AdminAuth {
   static const String _salt = 'TechLife|admin|v1|';
-  static const String _defaultHash = 'f3e18bab6d69d74a66efd776cce7a55391d09a72964947b58cd07ceaea905f6a';
-  // CI passes an empty value when the ADMIN_HASH secret is not set, so empty means "use the default".
+  static const String _defaultHash = '2e6ea9b95e67f23490b5f2a46dfbec32fb7264c2f0be47f3e51d7c8c9305fdaa';
+  // An optional compile-time override is available for private custom builds.
   static const String _envHash = String.fromEnvironment('ADMIN_HASH');
   static String get _hash => _envHash.isEmpty ? _defaultHash : _envHash;
 

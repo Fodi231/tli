@@ -19,6 +19,8 @@ import '../shell.dart';
 import '../wallpaper.dart';
 import '../widgets.dart';
 import 'admin_app.dart';
+import '../market/marketplace_app.dart';
+import '../../core/market/market_strings.dart';
 
 class _Item {
   final String page, titleKey;
@@ -726,6 +728,7 @@ class _SettingsAppState extends State<SettingsApp> {
         _row(Icons.vpn_key, const Color(0xFF8B5CF6), 'builtin_key'.tr, value: gs.hasBuiltInKey ? 'has'.tr : 'hasnt'.tr, chevron: false),
         _row(Icons.key, const Color(0xFF6366F1), 'key_type'.tr, value: AiService.keyKind(gs.aiKey), chevron: false),
       ], footer: gs.online ? null : 'ai_needs_net'.tr),
+      OutlinedButton.icon(onPressed: () => showDialog<void>(context: context, builder: (c) => GeminiSetupDialog(gs: gs)), icon: const Icon(Icons.auto_awesome), label: Text(mt('Модель Gemini и проверка подключения', 'Gemini model and connection test', 'Модель Gemini й перевірка підключення'))),
       Text('gemini_key'.tr, style: const TextStyle(color: C.sub, fontWeight: FontWeight.w600)),
       const SizedBox(height: 6),
       TextField(

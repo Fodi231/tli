@@ -10,6 +10,13 @@ class Shell extends ChangeNotifier {
   String? app;
   Object? arg;
 
+  void lock() {
+    unlocked = false;
+    app = null;
+    arg = null;
+    notifyListeners();
+  }
+
   void unlock() {
     unlocked = true;
     notifyListeners();

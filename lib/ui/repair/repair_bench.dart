@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/catalog.dart';
+import '../../core/market/device_catalog.dart';
 import '../../core/game_state.dart';
 import '../../core/i18n.dart';
 import '../../core/repair/repair_session.dart';
@@ -22,6 +23,7 @@ IconData repairToolIcon(RepairTool tool) => switch (tool) {
   RepairTool.spudger => Icons.format_color_reset_outlined,
   RepairTool.tweezers => Icons.content_cut,
   RepairTool.meter => Icons.speed_outlined,
+  RepairTool.solvent => Icons.water_drop_outlined,
 };
 
 class RepairBench extends StatefulWidget {
@@ -129,7 +131,10 @@ class _RepairBenchState extends State<RepairBench> {
       return AppPage(title: 'repair'.tr, child: Empty('no_orders'.tr));
     }
     final matching = gs.orders.where((o) => o.id == widget.orderId);
-    final device = matching.isEmpty ? 'iPhone 13' : matching.first.device;
+    final device =
+        matching.isEmpty
+            ? (deviceFor(s.device)?.name ?? s.device)
+            : matching.first.device;
     final cat = services[s.service]!.cat;
     final quality = (1 - .12 * s.mistakes * (gs.insured ? .5 : 1)).clamp(
       .4,
@@ -158,6 +163,7 @@ class _RepairBenchState extends State<RepairBench> {
                 LogicalKeyboardKey.digit5,
                 LogicalKeyboardKey.digit6,
                 LogicalKeyboardKey.digit7,
+                LogicalKeyboardKey.digit8,
               ][i],
             ): () {
               _sceneKey.currentState?.cancelInteraction();

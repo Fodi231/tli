@@ -36,13 +36,14 @@ const _strings = <String, List<String>>{
   'r_exit': ['К заказам', 'Orders', 'До замовлень'],
   'r_help': ['Как играть', 'How to play', 'Як грати'],
   'r_help_body': [
-    'Выберите инструмент, затем работайте с деталью. Винт: 3 нажатия. Перетаскивание: удерживайте деталь и ведите в выделенную зону. Прогрев и тест: удерживайте 1,2 секунды. Приближение: щипок или +/−. На ПК: 1–7 — инструменты, H — подсказки, Esc — выйти. Деталь списывается со склада при установке. Учебный стол бесплатный. Это игровая схема, не инструкция по ремонту реального устройства.',
-    'Select a tool, then interact with a component. Screw: 3 taps. Drag: move the component to the highlighted zone. Heat and test: hold for 1.2 seconds. Zoom: pinch or +/−. Desktop: 1–7 select tools, H toggles hints, Esc exits. A spare part is consumed when installed. Practice is free. This is a game schematic, not a real device repair guide.',
-    'Обери інструмент і працюй із деталлю. Гвинт: 3 натискання. Перетягування: веди деталь у виділену зону. Прогрів і тест: утримуй 1,2 секунди. Наближення: щипок або +/−. На ПК: 1–7 — інструменти, H — підказки, Esc — вихід. Запчастина списується під час встановлення. Навчальний стіл безкоштовний. Це ігрова схема, а не інструкція ремонту справжнього пристрою.',
+    'Выберите инструмент, затем работайте с деталью. Винт: 3 нажатия. Перетаскивание: удерживайте деталь и ведите в выделенную зону. Прогрев и тест: удерживайте 1,2 секунды. Приближение: щипок или +/−. На ПК: 1–8 — инструменты, H — подсказки, Esc — выйти. Деталь списывается со склада при установке. Учебный стол бесплатный. Это игровая схема, не инструкция по ремонту реального устройства.',
+    'Select a tool, then interact with a component. Screw: 3 taps. Drag: move the component to the highlighted zone. Heat and test: hold for 1.2 seconds. Zoom: pinch or +/−. Desktop: 1–8 select tools, H toggles hints, Esc exits. A spare part is consumed when installed. Practice is free. This is a game schematic, not a real device repair guide.',
+    'Обери інструмент і працюй із деталлю. Гвинт: 3 натискання. Перетягування: веди деталь у виділену зону. Прогрів і тест: утримуй 1,2 секунди. Наближення: щипок або +/−. На ПК: 1–8 — інструменти, H — підказки, Esc — вихід. Запчастина списується під час встановлення. Навчальний стіл безкоштовний. Це ігрова схема, а не інструкція ремонту справжнього пристрою.',
   ],
   'r_new': ['НОВАЯ ДЕТАЛЬ', 'NEW PART', 'НОВА ДЕТАЛЬ'],
   'r_old': ['СНЯТАЯ ДЕТАЛЬ', 'REMOVED PART', 'ЗНЯТА ДЕТАЛЬ'],
   'r_tray': ['ЛОТОК КРЕПЕЖА', 'PARTS TRAY', 'ЛОТОК КРІПЛЕННЯ'],
+  'r_cover_place': ['МЕСТО КРЫШКИ', 'COVER REST', 'МІСЦЕ КРИШКИ'],
   'r_display_place': ['МЕСТО ДИСПЛЕЯ', 'DISPLAY REST', 'МІСЦЕ ДИСПЛЕЯ'],
   'r_installed': ['Установлено', 'Installed', 'Встановлено'],
   'r_in_stock': ['На складе', 'In stock', 'На складі'],
@@ -151,6 +152,56 @@ const _strings = <String, List<String>>{
     'Heat · hold on the screen.',
     'Прогрів · утримуй на екрані.',
   ],
+  'r_step_flip_front': [
+    'Перевернуть корпус экраном вверх',
+    'Turn the chassis screen-up',
+    'Перевернути корпус екраном догори',
+  ],
+  'r_hint_flip_front': [
+    'Выбери руку и нажми на корпус.',
+    'Choose the hand and tap the chassis.',
+    'Обери руку й натисни на корпус.',
+  ],
+  'r_step_display_heat': [
+    'Ослабить клей дисплея',
+    'Soften display adhesive',
+    'Послабити клей дисплея',
+  ],
+  'r_hint_display_heat': [
+    'Удерживай нагреватель на переднем дисплее.',
+    'Hold the heater over the front display.',
+    'Утримуй нагрівач на передньому дисплеї.',
+  ],
+  'r_step_flip_back': [
+    'Перевернуть корпус обратно',
+    'Turn the chassis back',
+    'Перевернути корпус назад',
+  ],
+  'r_hint_flip_back': [
+    'Выбери руку и нажми на корпус для подключения шлейфов.',
+    'Choose the hand and tap the chassis to reconnect the cables.',
+    'Обери руку й натисни на корпус для підключення шлейфів.',
+  ],
+  'r_step_open_back': [
+    'Снять заднюю крышку',
+    'Lift the rear cover',
+    'Зняти задню кришку',
+  ],
+  'r_hint_open_back': [
+    'Перетащи прогретую заднюю крышку вправо на подставку.',
+    'Drag the heated rear cover onto the right stand.',
+    'Перетягни прогріту задню кришку праворуч на підставку.',
+  ],
+  'r_step_close_back': [
+    'Закрыть заднюю крышку',
+    'Refit the rear cover',
+    'Закрити задню кришку',
+  ],
+  'r_hint_close_back': [
+    'Верни крышку на корпус после подключения шлейфов.',
+    'Return the cover after reconnecting the flex cables.',
+    'Поверни кришку після підключення шлейфів.',
+  ],
   'r_step_open': ['Открыть дисплей', 'Lift the display', 'Відкрити дисплей'],
   'r_hint_open': [
     'Присоска · перетащите экран вправо.',
@@ -163,9 +214,9 @@ const _strings = <String, List<String>>{
     'Відкрутити захист шлейфів',
   ],
   'r_hint_shield_screws_out': [
-    'Отвёртка · 3 винта, по 3 оборота.',
-    'Driver · 3 screws, 3 turns each.',
-    'Викрутка · 3 гвинти, по 3 оберти.',
+    'Отвёртка · все выделенные винты, по 3 оборота.',
+    'Driver · all highlighted screws, 3 turns each.',
+    'Викрутка · усі виділені гвинти, по 3 оберти.',
   ],
   'r_step_shield_out': [
     'Снять защитную пластину',
@@ -183,9 +234,9 @@ const _strings = <String, List<String>>{
     'Від’єднати батарею',
   ],
   'r_hint_battery_off': [
-    'Лопатка · нажмите на нижний коннектор.',
-    'Spudger · tap the lower connector.',
-    'Лопатка · натисни на нижній конектор.',
+    'Лопатка · нажмите на выделенный коннектор батареи.',
+    'Spudger · tap the highlighted battery connector.',
+    'Лопатка · натисни на виділений конектор батареї.',
   ],
   'r_step_part_off': [
     'Отключить шлейф детали',
@@ -196,6 +247,27 @@ const _strings = <String, List<String>>{
     'Лопатка · нажмите на верхний коннектор.',
     'Spudger · tap the upper connector.',
     'Лопатка · натисни на верхній конектор.',
+  ],
+  'r_tool_solvent': ['IPA', 'IPA', 'IPA'],
+  'r_step_adhesive_soften': [
+    'Ослабить клей батареи',
+    'Soften battery adhesive',
+    'Послабити клей батареї',
+  ],
+  'r_hint_adhesive_soften': [
+    'IPA · удерживай у выделенного края батареи.',
+    'IPA · hold at the highlighted battery edge.',
+    'IPA · утримуй біля виділеного краю батареї.',
+  ],
+  'r_step_adhesive_handle': [
+    'Поднять язычок батареи',
+    'Lift the battery pull handle',
+    'Підняти язичок батареї',
+  ],
+  'r_hint_adhesive_handle': [
+    'Перетащи синий язычок в лоток.',
+    'Drag the blue pull handle to the tray.',
+    'Перетягни синій язичок у лоток.',
   ],
   'r_step_adhesive_out': [
     'Вытянуть клеевые полоски',
@@ -273,9 +345,9 @@ const _strings = <String, List<String>>{
     'Приєднати батарею',
   ],
   'r_hint_battery_on': [
-    'Лопатка · нажмите на нижний коннектор.',
-    'Spudger · tap the lower connector.',
-    'Лопатка · натисни на нижній конектор.',
+    'Лопатка · нажмите на выделенный коннектор батареи.',
+    'Spudger · tap the highlighted battery connector.',
+    'Лопатка · натисни на виділений конектор батареї.',
   ],
   'r_step_shield_in': [
     'Вернуть защитную пластину',

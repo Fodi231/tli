@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/painting.dart';
 
 import '../../core/repair/repair_session.dart';
+import '../../core/repair/device_profile.dart';
 
 /// A single coordinate system shared by rendering, hit testing and drop zones.
 class WorkbenchGeometry {
@@ -29,9 +30,84 @@ class WorkbenchGeometry {
     final p = phone;
     Rect at(double x, double y, double w, double h) =>
         Rect.fromLTWH(p.left + x, p.top + y, w, h);
+    final profile = profileFor(s.device);
+    Rect box(PartBox b) => at(b.x, b.y, b.w, b.h);
+    if (id == 'battery') return box(profile.battery);
+    if (id == 'adhesive_edge') {
+      return at(
+        profile.battery.x - 5,
+        profile.battery.y + 35,
+        24,
+        profile.battery.h - 60,
+      );
+    }
+    if (id == 'camera') return box(profile.camera);
+    if (id == 'port') return box(profile.port);
+    if (id == 'shield') return box(profile.shield);
+    if (id == 'battery_connector') return box(profile.connector('battery'));
+    if (id == 'part_connector') {
+      return box(
+        profile.connector(
+          s.service == 'battery'
+              ? (profile.rearAccess ? 'port' : 'display')
+              : s.service,
+        ),
+      );
+    }
+    if (id == 'interconnect_1') return at(124, 348, 30, 16);
+    if (id.startsWith('shield_')) {
+      final i = int.tryParse(id.split('_').last) ?? 0;
+      final b = profile.shield;
+      return at(
+        b.x + (i.isEven ? 3 : b.w - 19),
+        b.y +
+            3 +
+            (i ~/ 2) *
+                (b.h - 22) /
+                ((profile.shieldScrews - 1) ~/ 2).clamp(1, 10),
+        18,
+        18,
+      );
+    }
+    if (id.startsWith('adhesive_')) {
+      final i = int.tryParse(id.split('_').last) ?? 0;
+      final b = profile.battery;
+      if (profile.id == 'galaxys23') {
+        return at(b.x + b.w / 2 - 16, b.y + b.h / 2 - 17, 32, 34);
+      }
+      final rowCount =
+          profile.adhesiveTabs > 3
+              ? profile.adhesiveTabs ~/ 2
+              : profile.adhesiveTabs;
+      final top = profile.adhesiveTabs > 3 && i >= rowCount;
+      final col = i % rowCount.clamp(1, 6);
+      return at(
+        b.x + 15 + col * (b.w - 53) / (rowCount - 1).clamp(1, 5),
+        top ? b.y - 8 : b.y + b.h - 13,
+        23,
+        25,
+      );
+    }
+    if (id == 'part_0' || id == 'part_1' || id == 'part_2') {
+      final b = s.service == 'camera' ? profile.camera : profile.port;
+      final i = int.parse(id.split('_').last);
+      return at(
+        b.x +
+            (i == 0
+                ? -4
+                : i == 1
+                ? b.w - 14
+                : b.w / 2),
+        b.y + (i == 1 ? b.h - 14 : -4),
+        18,
+        18,
+      );
+    }
     switch (id) {
       case 'screen':
         return s.isOpen ? parkedDisplay : p.deflate(8);
+      case 'front_display':
+      case 'display_mount':
       case 'chassis':
         return p;
       case 'display_park':
@@ -46,40 +122,10 @@ class WorkbenchGeometry {
         return partsTray.deflate(28);
       case 'power':
         return at(211, 85, 24, 62);
-      case 'battery':
-        return at(22, 132, 126, 230);
-      case 'camera':
-        return at(20, 24, 104, 86);
-      case 'port':
-        return at(32, 385, 160, 30);
-      case 'shield':
-        return at(157, 195, 45, 112);
-      case 'battery_connector':
-        return at(150, 277, 32, 20);
-      case 'part_connector':
-        return at(150, 234, 32, 20);
       case 'frame_0':
         return at(49, 421, 18, 18);
       case 'frame_1':
         return at(157, 421, 18, 18);
-      case 'shield_0':
-        return at(167, 190, 18, 18);
-      case 'shield_1':
-        return at(187, 242, 18, 18);
-      case 'shield_2':
-        return at(164, 300, 18, 18);
-      case 'adhesive_0':
-        return at(45, 350, 25, 30);
-      case 'adhesive_1':
-        return at(100, 350, 25, 30);
-      case 'part_0':
-        return s.service == 'camera' ? at(15, 21, 18, 18) : at(26, 380, 18, 18);
-      case 'part_1':
-        return s.service == 'camera'
-            ? at(114, 100, 18, 18)
-            : at(182, 380, 18, 18);
-      case 'part_2':
-        return at(106, 400, 18, 18);
       case 'test_screen':
         return at(44, 125, 136, 72);
       case 'test_camera':

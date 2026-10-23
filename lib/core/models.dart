@@ -53,6 +53,7 @@ class Course {
 class Order {
   final String id, device, service;
   final double price, lat, lng;
+  final String? stockId;
   String status; // available | active | done
   Order({
     required this.id,
@@ -62,6 +63,7 @@ class Order {
     required this.lat,
     required this.lng,
     this.status = 'available',
+    this.stockId,
   });
 
   Map<String, dynamic> toJson() => {
@@ -72,6 +74,7 @@ class Order {
     'lat': lat,
     'lng': lng,
     'status': status,
+    'stockId': stockId,
   };
 
   factory Order.fromJson(Map<String, dynamic> j) => Order(
@@ -82,44 +85,82 @@ class Order {
     lat: (j['lat'] as num).toDouble(),
     lng: (j['lng'] as num).toDouble(),
     status: j['status'] as String? ?? 'available',
+    stockId: j['stockId'] as String?,
   );
 }
 
 class StockItem {
   final String id, name;
   final double cost, market;
-  StockItem(this.id, this.name, this.cost, this.market);
-
+  final String? deviceId, sourceListingId;
+  String? fault;
+  bool repaired;
+  StockItem(
+    this.id,
+    this.name,
+    this.cost,
+    this.market, {
+    this.deviceId,
+    this.sourceListingId,
+    this.fault,
+    this.repaired = false,
+  });
+  double get resaleValue => fault == null ? market : market * .52;
   Map<String, dynamic> toJson() => {
     'id': id,
     'name': name,
     'cost': cost,
     'market': market,
+    'device': deviceId,
+    'listing': sourceListingId,
+    'fault': fault,
+    'repaired': repaired,
   };
   factory StockItem.fromJson(Map<String, dynamic> j) => StockItem(
     j['id'],
     j['name'],
     (j['cost'] as num).toDouble(),
     (j['market'] as num).toDouble(),
+    deviceId: j['device'],
+    sourceListingId: j['listing'],
+    fault: j['fault'],
+    repaired: j['repaired'] == true,
   );
 }
 
 class ChatMsg {
   final bool mine;
   final String text;
-  final bool fallback; // reply was generated offline because the AI failed
-  ChatMsg(this.mine, this.text, {this.fallback = false});
+  final bool fallback;
+  final DateTime at;
+  ChatMsg(this.mine, this.text, {this.fallback = false, DateTime? at})
+    : at = at ?? DateTime.now();
+  Map<String, dynamic> toJson() => {
+    'mine': mine,
+    'text': text,
+    'fallback': fallback,
+    'at': at.millisecondsSinceEpoch,
+  };
+  factory ChatMsg.fromJson(Map<String, dynamic> j) => ChatMsg(
+    j['mine'] == true,
+    j['text'] ?? '',
+    fallback: j['fallback'] == true,
+    at: j['at'] is int ? DateTime.fromMillisecondsSinceEpoch(j['at']) : null,
+  );
 }
 
 class Deal {
-  final String id, kind, item, counterpart; // kind: buy | sell
+  final String id, kind, item, counterpart;
   final double market, ask, limit;
+  final String? listingId, deviceId, fault;
+  final String description;
   String? stockId;
-  String status = 'open'; // open | won | lost
+  String status = 'open'; // open | agreed | won | lost
   int rounds = 0;
   bool busy = false;
   double price = 0;
   final List<ChatMsg> messages = [];
+  double get currentPrice => price > 0 ? price : ask;
   Deal({
     required this.id,
     required this.kind,
@@ -128,7 +169,54 @@ class Deal {
     required this.market,
     required this.ask,
     required this.limit,
+    this.listingId,
+    this.deviceId,
+    this.fault,
+    this.description = '',
   });
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'kind': kind,
+    'item': item,
+    'name': counterpart,
+    'market': market,
+    'ask': ask,
+    'limit': limit,
+    'listing': listingId,
+    'device': deviceId,
+    'fault': fault,
+    'description': description,
+    'stock': stockId,
+    'status': status,
+    'rounds': rounds,
+    'price': price,
+    'messages': messages.map((m) => m.toJson()).toList(),
+  };
+  factory Deal.fromJson(Map<String, dynamic> j) {
+    final d = Deal(
+      id: j['id'],
+      kind: j['kind'],
+      item: j['item'],
+      counterpart: j['name'],
+      market: (j['market'] as num).toDouble(),
+      ask: (j['ask'] as num).toDouble(),
+      limit: (j['limit'] as num).toDouble(),
+      listingId: j['listing'],
+      deviceId: j['device'],
+      fault: j['fault'],
+      description: j['description'] ?? '',
+    );
+    d.stockId = j['stock'];
+    d.status = j['status'] ?? 'open';
+    d.rounds = j['rounds'] ?? 0;
+    d.price = (j['price'] as num? ?? 0).toDouble();
+    d.messages.addAll(
+      (j['messages'] as List? ?? []).map(
+        (m) => ChatMsg.fromJson(Map<String, dynamic>.from(m)),
+      ),
+    );
+    return d;
+  }
 }
 
 class AppNotification {

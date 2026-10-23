@@ -1,0 +1,79 @@
+[
+  {
+    "id": "iphone11",
+    "file": "assets/market/iphone11.jpg",
+    "title": "IPhone_11_all_color.jpg",
+    "author": "Ahmadkurdi44",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "source": "https://commons.wikimedia.org/wiki/File:IPhone_11_all_color.jpg",
+    "download": "https://upload.wikimedia.org/wikipedia/commons/0/09/IPhone_11_all_color.jpg",
+    "changes": "Resized and JPEG-encoded; source license retained."
+  },
+  {
+    "id": "iphone12",
+    "file": "assets/market/iphone12.jpg",
+    "title": "IPhone_12_Green_128g.jpg",
+    "author": "茅野ふたば",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "source": "https://commons.wikimedia.org/wiki/File:IPhone_12_Green_128g.jpg",
+    "download": "https://upload.wikimedia.org/wikipedia/commons/5/5a/IPhone_12_Green_128g.jpg",
+    "changes": "Resized and JPEG-encoded; source license retained."
+  },
+  {
+    "id": "iphone13",
+    "file": "assets/market/iphone13.jpg",
+    "title": "IPhone_13_for_Tora_(52641558635).jpg",
+    "author": "Tatsuo Yamashita (yto)",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+    "source": "https://commons.wikimedia.org/wiki/File:IPhone_13_for_Tora_%2852641558635%29.jpg",
+    "download": "https://upload.wikimedia.org/wikipedia/commons/2/2b/IPhone_13_for_Tora_%2852641558635%29.jpg",
+    "changes": "Resized and JPEG-encoded; source license retained."
+  },
+  {
+    "id": "iphone15pro",
+    "file": "assets/market/iphone15pro.jpg",
+    "title": "IPhone_15_Pro_20240225.jpg",
+    "author": "茅野ふたば",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "source": "https://commons.wikimedia.org/wiki/File:IPhone_15_Pro_20240225.jpg",
+    "download": "https://upload.wikimedia.org/wikipedia/commons/3/3e/IPhone_15_Pro_20240225.jpg",
+    "changes": "Cropped around the device; resized and JPEG-encoded. CC BY-SA 4.0 retained."
+  },
+  {
+    "id": "galaxys22",
+    "file": "assets/market/galaxys22.jpg",
+    "title": "Back_of_the_Samsung_Galaxy_S22.jpg",
+    "author": "Hajoon0102",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "source": "https://commons.wikimedia.org/wiki/File:Back_of_the_Samsung_Galaxy_S22.jpg",
+    "download": "https://upload.wikimedia.org/wikipedia/commons/9/9e/Back_of_the_Samsung_Galaxy_S22.jpg",
+    "changes": "Resized and JPEG-encoded; source license retained."
+  },
+  {
+    "id": "galaxys23",
+    "file": "assets/market/galaxys23.jpg",
+    "title": "Back_of_the_Samsung_Galaxy_S23.jpg",
+    "author": "Hajoon0102",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "source": "https://commons.wikimedia.org/wiki/File:Back_of_the_Samsung_Galaxy_S23.jpg",
+    "download": "https://upload.wikimedia.org/wikipedia/commons/a/a8/Back_of_the_Samsung_Galaxy_S23.jpg",
+    "changes": "Cropped to the regular Galaxy S23 at the right of the original group photo; resized and JPEG-encoded. CC BY-SA 4.0 retained."
+  },
+  {
+    "id": "pixel7",
+    "file": "assets/market/pixel7.jpg",
+    "title": "Google_Pixel_7_back_(Snow).svg",
+    "author": "Mliu92; Iketsi",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "source": "https://commons.wikimedia.org/wiki/File:Google_Pixel_7_back_%28Snow%29.svg",
+    "download": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/Google_Pixel_7_back_%28Snow%29.svg/500px-Google_Pixel_7_back_%28Snow%29.svg.png",
+    "changes": "Resized and JPEG-encoded; source license retained."
+  }
+]

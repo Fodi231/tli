@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/catalog.dart';
+import '../../core/market/device_catalog.dart';
+import '../../core/market/market_strings.dart';
 import '../../core/game_state.dart';
 import '../../core/i18n.dart';
 import '../../core/repair/repair_session.dart';
@@ -73,6 +75,28 @@ class RepairApp extends StatelessWidget {
                 const Icon(Icons.chevron_right),
               ],
             ),
+          ),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<String>(
+            initialValue:
+                deviceFor(
+                  gs.repairs[RepairSession.practiceId]?.device ?? 'iphone13',
+                )!.id,
+            isExpanded: true,
+            decoration: InputDecoration(
+              labelText: mt(
+                'Модель для тренировки',
+                'Training model',
+                'Модель для тренування',
+              ),
+            ),
+            items: [
+              for (final d in deviceCatalog)
+                DropdownMenuItem(value: d.id, child: Text(d.name)),
+            ],
+            onChanged: (id) {
+              if (id != null) gs.resetPractice(id);
+            },
           ),
           const SizedBox(height: 24),
           Text(

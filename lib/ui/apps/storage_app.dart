@@ -7,6 +7,7 @@ import '../../core/i18n.dart';
 import '../../core/theme.dart';
 import '../shell.dart';
 import '../widgets.dart';
+import '../../core/market/market_strings.dart';
 
 class StorageApp extends StatelessWidget {
   const StorageApp({super.key});
@@ -42,6 +43,7 @@ class StorageApp extends StatelessWidget {
           Text('devices_stock'.tr, style: const TextStyle(color: C.sub, fontWeight: FontWeight.w600)),
           const SizedBox(height: 6),
           if (gs.stock.isEmpty) Panel(child: Text('empty'.tr, style: const TextStyle(color: C.sub))),
+          OutlinedButton.icon(onPressed: () => context.read<Shell>().open('market', arg: 2), icon: const Icon(Icons.storefront), label: Text(mt('Мои объявления и ремонт', 'My listings and repairs', 'Мої оголошення та ремонт'))),
           for (final it in gs.stock)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -56,7 +58,7 @@ class StorageApp extends StatelessWidget {
                         children: [
                           Text(it.name, style: const TextStyle(fontWeight: FontWeight.w600)),
                           Text('${'paid'.tr} ${money(it.cost)}', style: const TextStyle(color: C.sub, fontSize: 12)),
-                          Text('${'market_value'.tr} ${money(it.market)}', style: const TextStyle(color: C.sub, fontSize: 12)),
+                          Text('${'market_value'.tr} ${money(it.resaleValue)}', style: const TextStyle(color: C.sub, fontSize: 12)),
                         ],
                       ),
                     ),

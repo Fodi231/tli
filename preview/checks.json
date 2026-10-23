@@ -1,0 +1,10 @@
+{
+  "version": "0.5.0+5",
+  "flutter": "3.47.7",
+  "dart": "3.13.5",
+  "analyze": "No issues found",
+  "tests": 36,
+  "webRelease": true,
+  "liveGeminiTested": false,
+  "nativePackagesBuilt": false
+}

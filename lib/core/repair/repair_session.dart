@@ -1,6 +1,17 @@
+import 'device_profile.dart';
+
 /// Deterministic repair rules. The scene sends physical actions, never a
 /// "complete step" command. No Flutter dependency: saves and rules are portable.
-enum RepairTool { hand, driver, heater, suction, spudger, tweezers, meter }
+enum RepairTool {
+  hand,
+  driver,
+  heater,
+  suction,
+  spudger,
+  tweezers,
+  meter,
+  solvent,
+}
 
 enum RepairGesture { tap, drag, hold }
 
@@ -20,6 +31,7 @@ class RepairStep {
   final List<String> targets;
   final String? destination;
   final int turns;
+  final String? caption;
   const RepairStep(
     this.id,
     this.tool,
@@ -27,9 +39,10 @@ class RepairStep {
     this.targets, {
     this.destination,
     this.turns = 1,
+    this.caption,
   });
-  String get titleKey => 'r_step_$id';
-  String get hintKey => 'r_hint_$id';
+  String get titleKey => 'r_step_${caption ?? id}';
+  String get hintKey => 'r_hint_${caption ?? id}';
 }
 
 bool supportsWorkbench(String device) {
@@ -37,14 +50,24 @@ bool supportsWorkbench(String device) {
   return d.contains('iphone') || d.contains('galaxy') || d.contains('pixel');
 }
 
-List<RepairStep> repairRecipe(String service) {
+List<RepairStep> repairRecipe(String service, [String device = 'iphone13']) {
+  final profile = profileFor(device);
+  final shieldTargets = List.generate(profile.shieldScrews, (i) => 'shield_$i');
+  final cableTargets = [
+    'part_connector',
+    if (profile.rearAccess && (service == 'port' || service == 'battery'))
+      'interconnect_1',
+  ];
   const test = RepairStep('test', RepairTool.meter, RepairGesture.hold, [
     'test_screen',
     'test_camera',
     'test_charge',
   ]);
   if (service == 'diag') return [test];
-  final part = service == 'display' ? 'screen' : service;
+  final part =
+      service == 'display'
+          ? (profile.rearAccess ? 'front_display' : 'screen')
+          : service;
   return [
     const RepairStep('diagnose', RepairTool.meter, RepairGesture.hold, [
       'screen',
@@ -52,19 +75,25 @@ List<RepairStep> repairRecipe(String service) {
     const RepairStep('power_off', RepairTool.hand, RepairGesture.hold, [
       'power',
     ]),
-    const RepairStep('frame_out', RepairTool.driver, RepairGesture.tap, [
-      'frame_0',
-      'frame_1',
-    ], turns: 3),
+    if (profile.frameScrews)
+      const RepairStep('frame_out', RepairTool.driver, RepairGesture.tap, [
+        'frame_0',
+        'frame_1',
+      ], turns: 3),
     const RepairStep('heat', RepairTool.heater, RepairGesture.hold, ['screen']),
-    const RepairStep('open', RepairTool.suction, RepairGesture.drag, [
-      'screen',
-    ], destination: 'display_park'),
-    const RepairStep(
+    RepairStep(
+      'open',
+      RepairTool.suction,
+      RepairGesture.drag,
+      ['screen'],
+      destination: 'display_park',
+      caption: profile.rearAccess ? 'open_back' : null,
+    ),
+    RepairStep(
       'shield_screws_out',
       RepairTool.driver,
       RepairGesture.tap,
-      ['shield_0', 'shield_1', 'shield_2'],
+      shieldTargets,
       turns: 3,
     ),
     const RepairStep('shield_out', RepairTool.tweezers, RepairGesture.drag, [
@@ -73,16 +102,30 @@ List<RepairStep> repairRecipe(String service) {
     const RepairStep('battery_off', RepairTool.spudger, RepairGesture.tap, [
       'battery_connector',
     ]),
-    const RepairStep('part_off', RepairTool.spudger, RepairGesture.tap, [
-      'part_connector',
-    ]),
+    RepairStep('part_off', RepairTool.spudger, RepairGesture.tap, cableTargets),
+    if (profile.rearAccess && service == 'display') ...[
+      const RepairStep('flip_front', RepairTool.hand, RepairGesture.tap, [
+        'chassis',
+      ]),
+      const RepairStep('display_heat', RepairTool.heater, RepairGesture.hold, [
+        'front_display',
+      ]),
+    ],
     if (service == 'battery')
-      const RepairStep(
+      RepairStep(
         'adhesive_out',
-        RepairTool.tweezers,
-        RepairGesture.drag,
-        ['adhesive_0', 'adhesive_1'],
-        destination: 'parts_tray',
+        profile.adhesiveTabs == 0 ? RepairTool.solvent : RepairTool.tweezers,
+        profile.adhesiveTabs == 0 ? RepairGesture.hold : RepairGesture.drag,
+        profile.adhesiveTabs == 0
+            ? ['adhesive_edge']
+            : List.generate(profile.adhesiveTabs, (i) => 'adhesive_$i'),
+        destination: profile.adhesiveTabs == 0 ? null : 'parts_tray',
+        caption:
+            profile.adhesiveTabs == 0
+                ? 'adhesive_soften'
+                : profile.rearAccess
+                ? 'adhesive_handle'
+                : null,
       ),
     if (service == 'camera' || service == 'port')
       RepairStep(
@@ -97,9 +140,16 @@ List<RepairStep> repairRecipe(String service) {
     RepairStep('part_out', RepairTool.tweezers, RepairGesture.drag, [
       part,
     ], destination: 'old_tray'),
-    RepairStep('part_in', RepairTool.tweezers, RepairGesture.drag, [
-      'new_part',
-    ], destination: service == 'display' ? 'display_park' : part),
+    RepairStep(
+      'part_in',
+      RepairTool.tweezers,
+      RepairGesture.drag,
+      ['new_part'],
+      destination:
+          service == 'display'
+              ? (profile.rearAccess ? 'display_mount' : 'display_park')
+              : part,
+    ),
     if (service == 'camera' || service == 'port')
       RepairStep(
         'part_screws_in',
@@ -114,40 +164,51 @@ List<RepairStep> repairRecipe(String service) {
       const RepairStep('adhesive_in', RepairTool.hand, RepairGesture.hold, [
         'battery',
       ]),
-    const RepairStep('part_on', RepairTool.spudger, RepairGesture.tap, [
-      'part_connector',
-    ]),
+    if (profile.rearAccess && service == 'display')
+      const RepairStep('flip_back', RepairTool.hand, RepairGesture.tap, [
+        'chassis',
+      ]),
+    RepairStep('part_on', RepairTool.spudger, RepairGesture.tap, cableTargets),
     const RepairStep('battery_on', RepairTool.spudger, RepairGesture.tap, [
       'battery_connector',
     ]),
     const RepairStep('shield_in', RepairTool.tweezers, RepairGesture.drag, [
       'stored_shield',
     ], destination: 'shield'),
-    const RepairStep('shield_screws_in', RepairTool.driver, RepairGesture.tap, [
-      'shield_0',
-      'shield_1',
-      'shield_2',
-    ], turns: 3),
-    const RepairStep('close', RepairTool.suction, RepairGesture.drag, [
-      'screen',
-    ], destination: 'chassis'),
+    RepairStep(
+      'shield_screws_in',
+      RepairTool.driver,
+      RepairGesture.tap,
+      shieldTargets,
+      turns: 3,
+    ),
+    RepairStep(
+      'close',
+      RepairTool.suction,
+      RepairGesture.drag,
+      ['screen'],
+      destination: 'chassis',
+      caption: profile.rearAccess ? 'close_back' : null,
+    ),
     const RepairStep('seal', RepairTool.hand, RepairGesture.hold, ['screen']),
-    const RepairStep('frame_in', RepairTool.driver, RepairGesture.tap, [
-      'frame_0',
-      'frame_1',
-    ], turns: 3),
+    if (profile.frameScrews)
+      const RepairStep('frame_in', RepairTool.driver, RepairGesture.tap, [
+        'frame_0',
+        'frame_1',
+      ], turns: 3),
     test,
   ];
 }
 
 class RepairSession {
-  static const int schemaVersion = 1;
+  static const int schemaVersion = 2;
   static const String practiceId = '__practice__';
   static const int holdDurationMs = 1200;
   final String orderId;
   final String service;
+  final String device;
   final bool training;
-  late final List<RepairStep> steps = repairRecipe(service);
+  late final List<RepairStep> steps = repairRecipe(service, device);
   int _index = 0;
   int mistakes = 0;
   final Map<String, int> _turns = {};
@@ -156,7 +217,12 @@ class RepairSession {
   bool partConsumed = false;
   double? reward;
 
-  RepairSession(this.orderId, this.service, {this.training = false});
+  RepairSession(
+    this.orderId,
+    this.service, {
+    this.training = false,
+    this.device = 'iphone13',
+  });
 
   int get index => _index;
   bool get finished => _index == steps.length;
@@ -169,6 +235,11 @@ class RepairSession {
                       (current!.targets.length * current!.turns)) /
               steps.length;
   bool done(String id) => steps.take(_index).any((s) => s.id == id);
+  bool get frontFacing =>
+      profileFor(device).rearAccess &&
+      service == 'display' &&
+      done('flip_front') &&
+      !done('flip_back');
   bool get isOpen => done('open') && !done('close');
   bool get shieldRemoved => done('shield_out') && !done('shield_in');
   bool get batteryDisconnected => done('battery_off') && !done('battery_on');
@@ -231,6 +302,8 @@ class RepairSession {
     'v': schemaVersion,
     'order': orderId,
     'service': service,
+    'device': device,
+    'step': current?.id,
     'training': training,
     'index': _index,
     'mistakes': mistakes,
@@ -242,7 +315,7 @@ class RepairSession {
   };
 
   factory RepairSession.fromJson(Map<String, dynamic> json) {
-    if (json['v'] != schemaVersion ||
+    if (!const [1, schemaVersion].contains(json['v']) ||
         !const [
           'display',
           'battery',
@@ -256,9 +329,18 @@ class RepairSession {
       json['order'] as String,
       json['service'] as String,
       training: json['training'] == true,
+      device: json['device'] as String? ?? 'iphone13',
     );
     session._index =
         (json['index'] as int).clamp(0, session.steps.length).toInt();
+    if (json['v'] == 1 && json['device'] != null) {
+      final oldSteps = repairRecipe(session.service);
+      final oldIndex = (json['index'] as int).clamp(0, oldSteps.length);
+      final id = oldIndex == oldSteps.length ? null : oldSteps[oldIndex].id;
+      final match = session.steps.indexWhere((s) => s.id == id);
+      session._index =
+          id == null ? session.steps.length : (match >= 0 ? match : 2);
+    }
     session.mistakes = (json['mistakes'] as int? ?? 0).clamp(0, 100000).toInt();
     final turns = json['turns'];
     if (turns is Map && session.current != null) {

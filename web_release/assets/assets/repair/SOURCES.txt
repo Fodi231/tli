@@ -1,0 +1,68 @@
+TechLife 0.9 — Image credits / Источники изображений
+
+Repair guide photographs: iFixit and the contributors named below.
+Guide material is provided under CC BY-NC-SA 3.0:
+https://creativecommons.org/licenses/by-nc-sa/3.0/
+https://about.ifixit.com/Wiki/Licensing
+https://www.ifixit.com
+
+The original JPEG files are retained. The game crops, scales and rectifies perspective at render time and overlays interactive parts and highlights. These visual adaptations of iFixit material remain under CC BY-NC-SA 3.0. No endorsement by iFixit or the device manufacturers is implied. Commercial use needs the appropriate permission.
+
+iPhone 11 — Jeff Suovanen and contributors
+https://www.ifixit.com/Guide/iPhone+11+Battery+Replacement/127450
+Files: iphone11.jpg, iphone11_battery.jpg. The display-back photo was supplied by the user as IMG_0097.jpeg, with an iFixit watermark; its original attribution remains iFixit.
+
+iPhone 12 — Adam O'Camb and contributors
+https://www.ifixit.com/Guide/iPhone+12+Battery+Replacement/140588
+Files: iphone12.jpg, iphone12_display.jpg, iphone12_battery.jpg.
+
+iPhone 13 — Kyle Smith and contributors
+https://www.ifixit.com/Guide/iPhone+13+Battery+Replacement/145896
+Files: iphone13.jpg, iphone13_display.jpg, iphone13_battery.jpg.
+
+iPhone 15 Pro — Spencer Day and contributors
+https://www.ifixit.com/Guide/iPhone+15+Pro+Battery+Replacement/166394
+Files: iphone15pro.jpg, iphone15pro_display.jpg, iphone15pro_battery.jpg.
+
+Samsung Galaxy S22 — Spencer Day and contributors
+https://www.ifixit.com/Guide/Samsung+Galaxy+S22+Battery+Replacement/163932
+Files: galaxys22.jpg, galaxys22_battery.jpg.
+
+Samsung Galaxy S23 — Alex Diaz-Kokaisl and contributors
+https://www.ifixit.com/Guide/Samsung+Galaxy+S23+Battery+Replacement/174225
+Files: galaxys23.jpg, galaxys23_detail.jpg, galaxys23_battery.jpg.
+
+Google Pixel 7 — Dominik Schnabelrauch and contributors
+https://www.ifixit.com/Guide/Google+Pixel+7+Battery+Replacement/154680
+Files: pixel7.jpg, pixel7_display.jpg, pixel7_battery.jpg.
+
+Tool product images and battery product images: iFixit.
+The corresponding tool and part listings are linked from the repair guides above. Hand and multimeter illustrations are original game artwork.
+
+Foldable imagery and marketing photographs — permission for commercial redistribution has not been established:
+- Galaxy Z Fold7 splayed teardown — iFixit.
+  https://www.ifixit.com/Device/Samsug_Galaxy_Z_Fold_7
+  https://www.youtube.com/watch?v=9KhF6emBjbE
+  https://valkyrie.cdn.ifixit.com/media/2025/08/05154753/Foldy_battery_20e_3x2_small.jpg
+- HUAWEI Mate XT internals — TechInsights.
+  https://www.techinsights.com/blog/huawei-mate-xt-teardown
+  https://www.techinsights.com/sites/default/files/2024-10/huawei-mate-xt-battery.jpg
+- iPhone Duo teardown thumbnail — Kingmi Mobile.
+  https://www.youtube.com/watch?v=hTcvUnvwtaw
+  https://img.youtube.com/vi/hTcvUnvwtaw/maxresdefault.jpg
+  This published thumbnail is a reference image, not a verified service drawing. Fine mechanical details in the game remain approximate.
+- iPhone Duo catalogue image — Apple.
+  https://www.apple.com/iphone-duo/
+- Galaxy Z Fold7 catalogue image — Samsung.
+  https://www.samsung.com/uk/smartphones/galaxy-z-fold7/
+- HUAWEI Mate XT catalogue image — HUAWEI.
+  https://consumer.huawei.com/en/phones/mate-xt-ultimate-design/
+
+Device facts and controls:
+https://www.apple.com/iphone-duo/specs/
+https://www.samsung.com/uk/smartphones/galaxy-z-fold7/specs/
+https://consumer.huawei.com/en/phones/mate-xt-ultimate-design/specs/
+https://support.apple.com/guide/iphone/turn-iphone-on-or-off-iph841379c3d/ios
+
+The operating systems are local game simulations. Radio controls change the simulated device state. Camera photos depict the repair desk; the browser contains local help. Physical geometry, fastener counts and repair timing are simplified. This is not a service manual.
+

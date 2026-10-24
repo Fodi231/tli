@@ -75,5 +75,35 @@
     "source": "https://commons.wikimedia.org/wiki/File:Google_Pixel_7_back_%28Snow%29.svg",
     "download": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/Google_Pixel_7_back_%28Snow%29.svg/500px-Google_Pixel_7_back_%28Snow%29.svg.png",
     "changes": "Resized and JPEG-encoded; source license retained."
+  },
+  {
+    "id": "iphoneduo",
+    "file": "assets/market/iphoneduo.jpg",
+    "title": "iPhone Duo — official product image",
+    "author": "Apple",
+    "license": "Manufacturer marketing image. Permission for commercial redistribution has not been established.",
+    "licenseUrl": "https://www.apple.com/iphone-duo/",
+    "source": "https://www.apple.com/iphone-duo/",
+    "changes": "Original downloaded bytes retained. Scaled to fit the game card at render time."
+  },
+  {
+    "id": "galaxyfold7",
+    "file": "assets/market/galaxyfold7.jpg",
+    "title": "Galaxy Z Fold7 — official product image",
+    "author": "Samsung",
+    "license": "Manufacturer marketing image. Permission for commercial redistribution has not been established.",
+    "licenseUrl": "https://www.samsung.com/uk/smartphones/galaxy-z-fold7/",
+    "source": "https://www.samsung.com/uk/smartphones/galaxy-z-fold7/",
+    "changes": "Original downloaded bytes retained. Scaled to fit the game card at render time."
+  },
+  {
+    "id": "matext",
+    "file": "assets/market/matext.jpg",
+    "title": "HUAWEI Mate XT — official product image",
+    "author": "HUAWEI",
+    "license": "Manufacturer marketing image. Permission for commercial redistribution has not been established.",
+    "licenseUrl": "https://consumer.huawei.com/en/phones/mate-xt-ultimate-design/",
+    "source": "https://consumer.huawei.com/en/phones/mate-xt-ultimate-design/",
+    "changes": "Original downloaded bytes retained. Scaled to fit the game card at render time."
   }
 ]

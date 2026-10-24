@@ -1,29 +1,43 @@
-TechLife 0.11.1 -> 0.12.0: Luma bank
-Copy these files over full 0.11.1. No deletions.
-Native: flutter pub get, then rebuild. Web: deploy listed web_release files on the SAME origin.
-Preview exports are included in the full archive only.
+TechLife 0.13.0 -> 0.14.0+16
+iOS app interfaces and Settings; first launch and local character profile; readable system banners; working Liquid Glass.
+Apply over the full 0.13.0 project. No deletions. Native: flutter pub get, then rebuild.
+Web: replace web_release contents on the SAME origin and retain saved site data.
+Preview images are included only in the full archive.
 
-ASSET_NOTES.md
 CHANGED_FILES.txt
 README.md
-UPDATE_0_12_RU.md
+UPDATE_0_14_RU.md
 VALIDATION.md
-assets/icon/luma.jpg
 lib/core/app_info.dart
-lib/core/bank/luma_models.dart
-lib/core/bank/luma_state.dart
 lib/core/game_state.dart
-lib/core/i18n.dart
+lib/core/theme.dart
+lib/main.dart
+lib/ui/apps/achievements_app.dart
+lib/ui/apps/admin_app.dart
 lib/ui/apps/bank_app.dart
-lib/ui/luma/luma_card.dart
+lib/ui/apps/learning_app.dart
+lib/ui/apps/legacy_repair_app.dart
+lib/ui/apps/map_app.dart
+lib/ui/apps/notification_center.dart
+lib/ui/apps/notifications_app.dart
+lib/ui/apps/orders_app.dart
+lib/ui/apps/placeholder_app.dart
+lib/ui/apps/settings_app.dart
+lib/ui/apps/shop_app.dart
+lib/ui/apps/stats_app.dart
+lib/ui/apps/storage_app.dart
+lib/ui/ios_components.dart
+lib/ui/liquid_surface.dart
+lib/ui/market/market_style.dart
+lib/ui/onboarding.dart
 lib/ui/phone_shell.dart
+lib/ui/system_notice.dart
+lib/ui/widgets.dart
 pubspec.yaml
-test/core/luma_test.dart
-test/ui/luma_test.dart
+test/core/profile14_test.dart
+test/ui/appearance08_test.dart
+test/ui/ios14_test.dart
 web_release/.last_build_id
-web_release/assets/AssetManifest.bin
-web_release/assets/AssetManifest.bin.json
-web_release/assets/assets/icon/luma.jpg
 web_release/assets/fonts/MaterialIcons-Regular.otf
 web_release/flutter_bootstrap.js
 web_release/main.dart.js

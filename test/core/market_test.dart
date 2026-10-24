@@ -178,7 +178,7 @@ void main() {
     },
   );
   test(
-    'all seven hardware profiles finish every service with model-specific rules',
+    'all hardware profiles finish every service with model-specific rules',
     () {
       expect(
         repairProfiles.map((p) => p.id).toSet(),
@@ -192,13 +192,21 @@ void main() {
             )
             .toSet()
             .length,
-        7,
+        deviceCatalog.length,
       );
       for (final d in deviceCatalog) {
         for (final service in ['display', 'battery', 'camera', 'port']) {
           final s = RepairSession('x', service, device: d.name);
           final p = profileFor(d.name);
-          expect(s.steps.any((x) => x.id == 'frame_out'), p.apple);
+          expect(
+            s.steps.any((x) => x.id == 'frame_out'),
+            const {
+              'iphone11',
+              'iphone12',
+              'iphone13',
+              'iphone15pro',
+            }.contains(d.id),
+          );
           if (p.rearAccess && service == 'display') {
             expect(s.steps.any((x) => x.id == 'flip_front'), isTrue);
           }
@@ -222,7 +230,7 @@ void main() {
             device: model.name,
             training: true,
           );
-          final g = WorkbenchGeometry(wide);
+          final g = WorkbenchGeometry(wide, device: model.id);
           while (!s.finished) {
             final step = s.current!;
             for (final target in step.targets) {

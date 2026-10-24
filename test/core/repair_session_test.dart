@@ -5,6 +5,14 @@ import 'package:techlife/core/repair/repair_session.dart';
 
 void performStep(RepairSession s) {
   final step = s.current!;
+  if (step.id == 'power_off') {
+    s.runtime.shutDown();
+    s.runtime.advance(2200, apple: true, bootMs: 12000);
+  }
+  if (step.id == 'test' && !s.powered) {
+    s.runtime.boot();
+    s.runtime.advance(16000, apple: true, bootMs: 12000);
+  }
   s.tool = step.tool;
   for (final target in step.targets) {
     while (!s.finished && s.current!.id == step.id && !s.targetDone(target)) {
@@ -12,7 +20,7 @@ void performStep(RepairSession s) {
         target,
         step.gesture,
         destination: step.destination,
-        heldMs: RepairSession.holdDurationMs,
+        heldMs: s.heatingStep ? 6500 : RepairSession.holdDurationMs,
       );
       expect(result.accepted, isTrue, reason: '${step.id} / $target');
     }

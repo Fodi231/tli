@@ -17,6 +17,14 @@ Order order(String id, {String service = 'display'}) => Order(
 void finishStep(GameState gs, String id) {
   final s = gs.repairs[id]!;
   final step = s.current!;
+  if (step.id == 'power_off') {
+    s.runtime.shutDown();
+    s.runtime.advance(2200, apple: true, bootMs: 12000);
+  }
+  if (step.id == 'test' && !s.powered) {
+    s.runtime.boot();
+    s.runtime.advance(16000, apple: true, bootMs: 12000);
+  }
   gs.selectRepairTool(id, step.tool);
   for (final target in step.targets) {
     while (s.current?.id == step.id && !s.targetDone(target)) {
@@ -25,7 +33,7 @@ void finishStep(GameState gs, String id) {
         target,
         step.gesture,
         destination: step.destination,
-        heldMs: 1200,
+        heldMs: s.heatingStep ? 6500 : 1200,
       );
       expect(r.accepted, isTrue, reason: step.id);
     }

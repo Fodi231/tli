@@ -16,10 +16,23 @@ import 'package:techlife/ui/shell.dart';
 
 void doStep(RepairSession s) {
   final step = s.current!;
+  if (step.id == 'power_off') {
+    s.runtime.shutDown();
+    s.runtime.advance(2200, apple: true, bootMs: 12000);
+  }
+  if (step.id == 'test' && !s.powered) {
+    s.runtime.boot();
+    s.runtime.advance(16000, apple: true, bootMs: 12000);
+  }
   s.tool = step.tool;
   for (final target in step.targets) {
     while (s.current?.id == step.id && !s.targetDone(target)) {
-      s.act(target, step.gesture, destination: step.destination, heldMs: 1200);
+      s.act(
+        target,
+        step.gesture,
+        destination: step.destination,
+        heldMs: s.heatingStep ? 6500 : 1200,
+      );
     }
   }
 }
@@ -118,6 +131,25 @@ void main() {
       await pointer.up();
       await tester.pump();
       expect(s.current!.id, 'power_off');
+      while (s.current!.id != 'heat') {
+        doStep(s);
+      }
+      gs.selectRepairTool(s.orderId, RepairTool.heater);
+      await tester.pump();
+      final cold = await tester.startGesture(target('screen'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1700));
+      await cold.up();
+      await tester.pump();
+      expect(s.current!.id, 'heat');
+      expect(s.temperature, lessThan(65));
+      final warm = await tester.startGesture(target('screen'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 6500));
+      await warm.up();
+      await tester.pump();
+      expect(s.current!.id, 'lift_edge');
+      expect(s.temperature, inInclusiveRange(65, 85));
       while (s.current!.id != 'open') {
         doStep(s);
       }

@@ -570,7 +570,7 @@ class AppDef {
 }
 
 const homeApps = [
-  AppDef('market', Icons.bubble_chart, Color(0xFF0099F7)),
+  AppDef('market', Icons.shopping_bag_rounded, Color(0xFF008E95)),
   AppDef('mail', Icons.mail, Color(0xFF3B82F6)),
   AppDef('messages', Icons.chat_bubble, Color(0xFF22C55E)),
   AppDef('map', Icons.map, Color(0xFF14B8A6)),
@@ -588,7 +588,7 @@ const homeApps = [
 ];
 
 const dockApps = [
-  AppDef('market', Icons.bubble_chart, Color(0xFF0099F7)),
+  AppDef('market', Icons.shopping_bag_rounded, Color(0xFF008E95)),
   AppDef('repair', Icons.build, Color(0xFFF59E0B)),
   AppDef('messages', Icons.chat_bubble, Color(0xFF22C55E)),
   AppDef('settings', Icons.settings, Color(0xFF6B7280)),

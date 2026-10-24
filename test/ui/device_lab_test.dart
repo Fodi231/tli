@@ -163,7 +163,7 @@ void main() {
             t.getSize(find.byKey(const ValueKey('device_screen'))).width;
         await t.tap(find.byKey(const ValueKey('fold_button')));
         await t.pump();
-        await t.pump(const Duration(milliseconds: 350));
+        await t.pump(const Duration(milliseconds: 600));
         final mid =
             t.getSize(find.byKey(const ValueKey('device_screen'))).width;
         expect(mid, greaterThan(before));
@@ -216,6 +216,15 @@ void main() {
         await t.pump(const Duration(milliseconds: 500));
         await capture(t, key, 'preview/09_inside_${model.id}.png');
         expect(t.takeException(), isNull, reason: model.id);
+        await t.pumpWidget(const SizedBox());
+        while (s.current!.id != 'part_in') {
+          performStep(s);
+        }
+        await t.pumpWidget(phoneApp(gs, sh, boundary: key));
+        await t.pump(const Duration(milliseconds: 300));
+        await capture(t, key, 'preview/11_removed_${model.id}.png');
+        expect(s.partRemoved, isTrue);
+        expect(t.takeException(), isNull, reason: 'removed ${model.id}');
         await t.pumpWidget(const SizedBox());
       }
       gs.dispose();

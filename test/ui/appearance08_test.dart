@@ -61,12 +61,23 @@ void main() {
       await tester.tap(find.text('appearance'.tr));
       await tester.pump();
       final toggle = find.byKey(const ValueKey('liquid_glass_switch'));
-      expect(tester.widget<SwitchListTile>(toggle).value, isTrue);
+      expect(tester.widget<Switch>(toggle).value, isTrue);
       await tester.tap(toggle);
       await tester.pump();
       expect(gs.liquidGlass, isFalse);
       final thumb = find.byKey(const ValueKey('wallpaper_asset_0'));
-      await tester.ensureVisible(thumb);
+      await tester.scrollUntilVisible(
+        thumb.hitTestable(),
+        160,
+        scrollable:
+            find
+                .byWidgetPredicate(
+                  (w) =>
+                      w is Scrollable && w.axisDirection == AxisDirection.down,
+                )
+                .first,
+        maxScrolls: 30,
+      );
       await tester.pump();
       await tester.tap(thumb);
       await tester.pump();
@@ -131,7 +142,7 @@ void main() {
         matching: find.text('Подключение работает'),
       );
       expect(label, findsOneWidget);
-      expect(tester.widget<Text>(label).style!.color, const Color(0xFF10283C));
+      expect(tester.widget<Text>(label).style!.color, const Color(0xFFF5F5F7));
       expect(
         find.descendant(of: bar, matching: find.byType(LiquidSurface)),
         findsOneWidget,

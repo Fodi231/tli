@@ -70,3 +70,17 @@ The operating systems are local game simulations. Radio controls change the simu
 0.11 correction: clean_fold_chassis.png is original reference-guided game artwork generated with the built-in image generation tool. Fold7 and Mate XT use this clean chassis atlas, not the previously embedded splay photographs. Batteries are separately rendered code-native elements. The atlas is an artistic reconstruction, not a manufacturer drawing. Old source files remain as research references. Full original display-back photos are no longer rendered because some contained fingers.
 
 0.11.1 tool icons: driver_icon.png, heater_icon.png, suction_icon.png, spudger_icon.png, tweezers_icon.png, solvent_icon.png, pick_icon.png and adhesive_icon.png are original generated stylized game artwork with transparent backgrounds. Created with the built-in image tool, using the first generated screwdriver only as a visual style reference for the other seven. No external product photos were used as icon references. The glove hand and multimeter remain the original code-native artwork. Earlier tool product JPEGs remain bundled for history/reference, but are no longer rendered by ToolArtwork. Prompts: TOOL_ICONS_PROMPTS.json.
+
+
+0.13 update — active repair visuals are ORIGINAL GENERATIONS, not the archived photographs above.
+Runtime sources: assets/repair/generated/*.png and atlas.json. Tool: built-in imagegen. Full prompt set: ANATOMY_0_13_PROMPTS.json. Per-model atlases cover iphone11, iphone12, iphone13, iphone15pro, galaxys22, galaxys23, pixel7, iphoneduo, galaxyfold7, matext. Three additional standalone chassis textures serve the foldables. All generated PNG pixels and alpha are preserved. UV bounds and part placement are defined by game metadata. Reference-guided artistic reconstructions are not engineering drawings.
+
+MagSafe vs ordinary wireless charging — primary references checked 2026-10-24:
+https://support.apple.com/en-us/111865 (iPhone 11: Qi)
+https://support.apple.com/en-us/111876 (iPhone 12: magnetic array and alignment magnet)
+https://support.apple.com/en-us/105047 (MagSafe charging compatibility)
+https://www.apple.com/iphone-duo/specs/ (Duo: MagSafe, magnetic array)
+https://www.samsung.com/us/support/answer/ANS10006877/ (Fold7 magnetic accessory is a CASE)
+https://consumer.huawei.com/en/phones/mate-xt-ultimate-design/specs/ (Mate XT: wireless charging and physical sizes)
+
+The render does not transfer Samsung branding to Huawei, Google or Apple parts. Printed labels are code-driven; no invented individual-cell capacity is presented as a manufacturer specification.

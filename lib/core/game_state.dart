@@ -43,6 +43,10 @@ class GameState extends ChangeNotifier {
   final Set<String> favorites = {};
   final Set<String> purchasedListings = {};
   final List<PlayerListing> playerListings = [];
+  final Map<String, MarketDraft> marketDrafts = {};
+  final Map<String, int> favoriteReferencePrices = {};
+  final Map<String, int> favoriteNotifiedPrices = {};
+  bool favoritePriceAlerts = true;
   bool _disposed = false;
   List<AppNotification> notifications = [];
   List<Txn> txns = [];
@@ -89,6 +93,7 @@ class GameState extends ChangeNotifier {
   int get unreadCount => notifications.where((n) => !n.read).length;
   int get openDeals =>
       deals.where((d) => d.status == 'open' || d.status == 'agreed').length;
+  int get unreadMarketMessages => deals.fold(0, (n, d) => n + d.unreadMessages);
   int get certCount => courseProgress.values.where((v) => v >= 1).length;
   bool hasCert(String id) => (courseProgress[id] ?? 0) >= 1;
   double get netWorth =>
@@ -118,6 +123,7 @@ class GameState extends ChangeNotifier {
     _applyAi();
     player = LatLng(city.lat, city.lng);
     _seedWorld();
+    checkFavoritePriceDrops();
     try {
       final c = Connectivity();
       _netOnline = (await c.checkConnectivity()).any(
@@ -240,6 +246,36 @@ class GameState extends ChangeNotifier {
     favorites
       ..clear()
       ..addAll((j['favorites'] as List? ?? []).whereType<String>());
+    favoritePriceAlerts = j['favoritePriceAlerts'] != false;
+    favoriteReferencePrices
+      ..clear()
+      ..addAll(
+        Map<String, dynamic>.from(
+          j['favoritePrices'] as Map? ?? {},
+        ).map((k, v) => MapEntry(k, (v as num).toInt())),
+      );
+    favoriteNotifiedPrices
+      ..clear()
+      ..addAll(
+        Map<String, dynamic>.from(
+          j['favoriteNotified'] as Map? ?? {},
+        ).map((k, v) => MapEntry(k, (v as num).toInt())),
+      );
+    for (final id in favorites) {
+      final l = listingFor(id);
+      if (l != null) favoriteReferencePrices.putIfAbsent(id, () => l.price);
+    }
+    marketDrafts.clear();
+    for (final raw in (j['marketDrafts'] as List? ?? [])) {
+      try {
+        final draft = MarketDraft.fromJson(Map<String, dynamic>.from(raw));
+        if (stock.any((s) => s.id == draft.stockId)) {
+          marketDrafts[draft.stockId] = draft;
+        }
+      } catch (_) {
+        /* Preserve all valid drafts. */
+      }
+    }
     purchasedListings
       ..clear()
       ..addAll((j['purchasedListings'] as List? ?? []).whereType<String>());
@@ -322,6 +358,10 @@ class GameState extends ChangeNotifier {
     'orders': orders.map((o) => o.toJson()).toList(),
     'deals': deals.map((d) => d.toJson()).toList(),
     'favorites': favorites.toList(),
+    'favoritePriceAlerts': favoritePriceAlerts,
+    'favoritePrices': favoriteReferencePrices,
+    'favoriteNotified': favoriteNotifiedPrices,
+    'marketDrafts': marketDrafts.values.map((d) => d.toJson()).toList(),
     'purchasedListings': purchasedListings.toList(),
     'playerListings': playerListings.map((l) => l.toJson()).toList(),
     'repairs': repairs.values.map((r) => r.toJson()).toList(),
@@ -389,6 +429,10 @@ class GameState extends ChangeNotifier {
     stock = [];
     deals = [];
     favorites.clear();
+    favoriteReferencePrices.clear();
+    favoriteNotifiedPrices.clear();
+    favoritePriceAlerts = true;
+    marketDrafts.clear();
     purchasedListings.clear();
     playerListings.clear();
     notifications = [];
@@ -842,7 +886,72 @@ class GameState extends ChangeNotifier {
 
   // --------------------------------------------------------------- deals
   void toggleFavorite(String id) {
-    if (!favorites.add(id)) favorites.remove(id);
+    final listing = listingFor(id);
+    if (listing == null) return;
+    if (!favorites.add(id)) {
+      favorites.remove(id);
+      favoriteReferencePrices.remove(id);
+      favoriteNotifiedPrices.remove(id);
+    } else {
+      favoriteReferencePrices[id] = listing.price;
+    }
+    _changed();
+  }
+
+  bool favoritePriceDropped(MarketListing l) =>
+      (favoriteReferencePrices[l.id] ?? l.price) > l.price;
+
+  void setFavoritePriceAlerts(bool value) {
+    favoritePriceAlerts = value;
+    checkFavoritePriceDrops();
+    _changed();
+  }
+
+  void checkFavoritePriceDrops() {
+    if (!favoritePriceAlerts) return;
+    for (final id in favorites) {
+      final l = listingFor(id);
+      if (l == null || purchasedListings.contains(id)) continue;
+      if (favoritePriceDropped(l) &&
+          l.price <
+              (favoriteNotifiedPrices[id] ?? favoriteReferencePrices[id]!)) {
+        favoriteNotifiedPrices[id] = l.price;
+        _note('deals', 'market_price_drop', '${l.device.name} · \$${l.price}');
+      }
+    }
+    _save();
+  }
+
+  void markDealRead(Deal d) {
+    if (!deals.contains(d) || d.unreadMessages == 0) return;
+    d.readMessageCount = d.messages.length;
+    _changed();
+  }
+
+  bool saveMarketDraft(
+    StockItem item, {
+    required String title,
+    required String description,
+    required String price,
+    required List<String> photos,
+  }) {
+    if (!stock.contains(item)) return false;
+    marketDrafts[item.id] = MarketDraft(
+      stockId: item.id,
+      title: title.trim().substring(0, min(title.trim().length, 100)),
+      description: description.trim().substring(
+        0,
+        min(description.trim().length, 2000),
+      ),
+      price: price,
+      photos: listingPhotos(photos),
+    );
+    _changed();
+    return true;
+  }
+
+  void removeMarketDraft(String stockId) {
+    marketDrafts.remove(stockId);
     _changed();
   }
 
@@ -944,8 +1053,10 @@ class GameState extends ChangeNotifier {
   PlayerListing? publishListing(
     StockItem item,
     double price,
-    String description,
-  ) {
+    String description, {
+    String? title,
+    List<String> photos = const [],
+  }) {
     if (!stock.contains(item) ||
         stockUnderRepair(item.id) ||
         !price.isFinite ||
@@ -966,10 +1077,22 @@ class GameState extends ChangeNotifier {
     final listing = PlayerListing(
       id: nextId(),
       stockId: item.id,
-      title: item.name,
+      title:
+          (title?.trim().isNotEmpty ?? false)
+              ? title!.trim().substring(0, min(title.trim().length, 100))
+              : item.name,
       description: description.trim(),
       price: price,
+      deviceId: item.deviceId ?? deviceFor(item.name)?.id,
+      photos: listingPhotos(photos),
+      condition:
+          item.fault != null
+              ? 'repair'
+              : item.repaired
+              ? 'repaired'
+              : 'used',
     );
+    marketDrafts.remove(item.id);
     playerListings.insert(0, listing);
     spawnDeal('sell', item: item, silent: true);
     _changed();
@@ -1175,6 +1298,7 @@ class GameState extends ChangeNotifier {
       if (item == null || stockUnderRepair(item.id)) return false;
       _income('deal_sell'.tr, d.price);
       stock.remove(item);
+      marketDrafts.remove(item.id);
       for (final l in playerListings.where(
         (l) => l.stockId == item.id && l.status == 'active',
       )) {

@@ -157,10 +157,16 @@ class Deal {
   String? stockId;
   String status = 'open'; // open | agreed | won | lost
   int rounds = 0;
+  int readMessageCount = 0;
   bool busy = false;
   double price = 0;
   final List<ChatMsg> messages = [];
   double get currentPrice => price > 0 ? price : ask;
+  int get unreadMessages =>
+      messages
+          .skip(readMessageCount.clamp(0, messages.length))
+          .where((m) => !m.mine)
+          .length;
   Deal({
     required this.id,
     required this.kind,
@@ -189,6 +195,7 @@ class Deal {
     'stock': stockId,
     'status': status,
     'rounds': rounds,
+    'readCount': readMessageCount,
     'price': price,
     'messages': messages.map((m) => m.toJson()).toList(),
   };
@@ -209,6 +216,7 @@ class Deal {
     d.stockId = j['stock'];
     d.status = j['status'] ?? 'open';
     d.rounds = j['rounds'] ?? 0;
+    d.readMessageCount = (j['readCount'] as num?)?.toInt() ?? 0;
     d.price = (j['price'] as num? ?? 0).toDouble();
     d.messages.addAll(
       (j['messages'] as List? ?? []).map(

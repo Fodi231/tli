@@ -1,9 +1,9 @@
 {
-  "version": "0.10.0+11",
+  "version": "0.11.1+13",
   "flutter": "3.47.8",
   "dart": "3.13.7",
   "analyze": "No issues found",
-  "tests": 93,
+  "tests": 98,
   "webRelease": true,
   "liveGeminiTested": true,
   "nativePackagesBuilt": false,
@@ -53,5 +53,16 @@
   "heatPointerTested": true,
   "backgroundPowerTested": true,
   "individualBatteryInstallation": true,
-  "completedV3MigrationTested": true
+  "completedV3MigrationTested": true,
+  "removedBatteryCaptures": 10,
+  "priceHallucinationMockTested": true,
+  "naturalAgreementButtonTested": true,
+  "independentPartMasks": true,
+  "hingeProjectionTested": true,
+  "generatedFoldChassis": true,
+  "uiTestsThisVersion": 6,
+  "fullSuiteRepeatedThisVersion": false,
+  "generatedToolIcons": 8,
+  "toolIconAlphaVerified": true,
+  "handAndMeterPainterUnchanged": true
 }

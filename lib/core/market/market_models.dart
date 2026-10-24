@@ -142,6 +142,9 @@ MarketListing? listingFor(String id) {
 
 class PlayerListing {
   final String id, stockId, title, description;
+  final String? deviceId;
+  final List<String> photos;
+  final String condition;
   final double price;
   String status;
   PlayerListing({
@@ -150,6 +153,9 @@ class PlayerListing {
     required this.title,
     required this.description,
     required this.price,
+    this.deviceId,
+    this.photos = const [],
+    this.condition = 'used',
     this.status = 'active',
   });
   Map<String, dynamic> toJson() => {
@@ -158,6 +164,9 @@ class PlayerListing {
     'title': title,
     'description': description,
     'price': price,
+    'device': deviceId,
+    'photos': photos,
+    'condition': condition,
     'status': status,
   };
   factory PlayerListing.fromJson(Map<String, dynamic> j) => PlayerListing(
@@ -166,6 +175,55 @@ class PlayerListing {
     title: j['title'],
     description: j['description'],
     price: (j['price'] as num).toDouble(),
+    deviceId: j['device'],
+    photos: listingPhotos(j['photos']),
+    condition: j['condition'] ?? 'used',
     status: j['status'] ?? 'active',
+  );
+}
+
+/// Local listing photos are bundled assets or user-selected encoded images.
+/// Imported saves cannot turn a photo into an arbitrary network request.
+List<String> listingPhotos(dynamic value) {
+  if (value is! List) return [];
+  var bytes = 0;
+  final result = <String>[];
+  for (final photo in value.whereType<String>()) {
+    final asset = deviceCatalog.any((d) => d.photo == photo);
+    final data =
+        (photo.startsWith('data:image/jpeg;base64,') ||
+            photo.startsWith('data:image/png;base64,')) &&
+        photo.length <= 1400000;
+    if ((!asset && !data) || bytes + photo.length > 6000000) continue;
+    result.add(photo);
+    bytes += photo.length;
+    if (result.length == 10) break;
+  }
+  return result;
+}
+
+class MarketDraft {
+  final String stockId, title, description, price;
+  final List<String> photos;
+  const MarketDraft({
+    required this.stockId,
+    required this.title,
+    required this.description,
+    required this.price,
+    this.photos = const [],
+  });
+  Map<String, dynamic> toJson() => {
+    'stock': stockId,
+    'title': title,
+    'description': description,
+    'price': price,
+    'photos': photos,
+  };
+  factory MarketDraft.fromJson(Map<String, dynamic> j) => MarketDraft(
+    stockId: j['stock'] as String,
+    title: j['title'] as String? ?? '',
+    description: j['description'] as String? ?? '',
+    price: j['price'] as String? ?? '',
+    photos: listingPhotos(j['photos']),
   );
 }

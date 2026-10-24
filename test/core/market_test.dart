@@ -134,7 +134,7 @@ void main() {
           body['systemInstruction']['parts'][0]['text'],
           contains('display'),
         );
-        expect(jsonEncode(body['contents']), contains('GAME RESULT: agree'));
+        expect(jsonEncode(body['contents']), contains(r'accept exactly $190'));
         return http.Response(
           jsonEncode({
             'candidates': [
@@ -142,7 +142,7 @@ void main() {
                 'content': {
                   'parts': [
                     {'text': 'internal', 'thought': true},
-                    {'text': 'Договорились, подтверди покупку.'},
+                    {'text': r'Договорились, за $190 отдам.'},
                   ],
                 },
               },
@@ -155,7 +155,7 @@ void main() {
       await gs.sendToDeal(d, '190');
       expect(d.status, 'agreed');
       expect(d.messages.last.fallback, isFalse);
-      expect(d.messages.last.text, 'Договорились, подтверди покупку.');
+      expect(d.messages.last.text, r'Договорились, за $190 отдам.');
       expect(gs.balance, 1500);
       expect(gs.stock, isEmpty);
     },

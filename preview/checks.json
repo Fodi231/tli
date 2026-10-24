@@ -1,10 +1,31 @@
 {
-  "version": "0.5.0+5",
+  "version": "0.7.0+8",
   "flutter": "3.47.7",
   "dart": "3.13.5",
   "analyze": "No issues found",
-  "tests": 36,
+  "tests": 66,
   "webRelease": true,
-  "liveGeminiTested": false,
-  "nativePackagesBuilt": false
+  "liveGeminiTested": true,
+  "nativePackagesBuilt": false,
+  "serverTests": 10,
+  "liveManagedIntegration": true,
+  "embeddedSharedKey": false,
+  "optionalLiveTestSkipped": true,
+  "marketTabs": 5,
+  "marketLanguages": [
+    "ru",
+    "en",
+    "uk"
+  ],
+  "marketLayoutSizes": [
+    "320x568",
+    "390x844",
+    "844x390",
+    "1366x768"
+  ],
+  "textScaleTested": 1.4,
+  "softwareKeyboardTested": true,
+  "newIconImported": true,
+  "liveGeminiTestedInVersion": "0.6.0",
+  "manualBrowserTested": false
 }

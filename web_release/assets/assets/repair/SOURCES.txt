@@ -66,3 +66,7 @@ https://support.apple.com/guide/iphone/turn-iphone-on-or-off-iph841379c3d/ios
 
 The operating systems are local game simulations. Radio controls change the simulated device state. Camera photos depict the repair desk; the browser contains local help. Physical geometry, fastener counts and repair timing are simplified. This is not a service manual.
 
+
+0.11 correction: clean_fold_chassis.png is original reference-guided game artwork generated with the built-in image generation tool. Fold7 and Mate XT use this clean chassis atlas, not the previously embedded splay photographs. Batteries are separately rendered code-native elements. The atlas is an artistic reconstruction, not a manufacturer drawing. Old source files remain as research references. Full original display-back photos are no longer rendered because some contained fingers.
+
+0.11.1 tool icons: driver_icon.png, heater_icon.png, suction_icon.png, spudger_icon.png, tweezers_icon.png, solvent_icon.png, pick_icon.png and adhesive_icon.png are original generated stylized game artwork with transparent backgrounds. Created with the built-in image tool, using the first generated screwdriver only as a visual style reference for the other seven. No external product photos were used as icon references. The glove hand and multimeter remain the original code-native artwork. Earlier tool product JPEGs remain bundled for history/reference, but are no longer rendered by ToolArtwork. Prompts: TOOL_ICONS_PROMPTS.json.

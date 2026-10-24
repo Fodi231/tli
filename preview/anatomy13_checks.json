@@ -1,0 +1,28 @@
+{
+  "models": [
+    "galaxyfold7",
+    "galaxys22",
+    "galaxys23",
+    "iphone11",
+    "iphone12",
+    "iphone13",
+    "iphone15pro",
+    "iphoneduo",
+    "matext",
+    "pixel7"
+  ],
+  "atlases": 10,
+  "spritesPerAtlas": 12,
+  "largeChassis": 3,
+  "magsafe": [
+    "iphone12",
+    "iphone13",
+    "iphone15pro",
+    "iphoneduo"
+  ],
+  "pixelsModified": false,
+  "coreTests": 13,
+  "uiTests": 2,
+  "allTestsPassed": 139,
+  "liveAiSkipped": 1
+}

@@ -1,11 +1,11 @@
 {
-    "name": "techlife",
-    "short_name": "techlife",
+    "name": "TechLife",
+    "short_name": "TechLife",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F2FAF9",
+    "theme_color": "#F2FAF9",
+    "description": "TechLife — симулятор ремонта и торговли техникой.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

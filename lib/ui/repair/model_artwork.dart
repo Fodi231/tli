@@ -238,7 +238,9 @@ class ModelArtwork {
       );
       label(
         c,
-        '${profile.batteryMah} mAh',
+        profile.batteryMah == 0
+            ? 'Dual-cell pack'
+            : '${profile.segments > 1 ? "Pack " : ""}${profile.batteryMah} mAh',
         r.center - const Offset(0, 18),
         9,
         Colors.white54,

@@ -587,7 +587,7 @@ const homeApps = [
   AppDef('mail', Icons.mail, Color(0xFF3B82F6)),
   AppDef('messages', Icons.chat_bubble, Color(0xFF22C55E)),
   AppDef('map', Icons.map, Color(0xFF14B8A6)),
-  AppDef('bank', Icons.account_balance, Color(0xFF16A34A)),
+  AppDef('bank', Icons.account_balance, Color(0xFF7C3AFF)),
   AppDef('shop', Icons.shopping_cart, Color(0xFFEF4444)),
   AppDef('repair', Icons.build, Color(0xFFF59E0B)),
   AppDef('work', Icons.work, Color(0xFF2563EB)),
@@ -877,7 +877,11 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 String appLabel(String id) =>
-    id == 'market' ? mt('ТехМаркет', 'TechMarket', 'ТехМаркет') : id.tr;
+    id == 'bank'
+        ? 'Luma'
+        : id == 'market'
+        ? mt('ТехМаркет', 'TechMarket', 'ТехМаркет')
+        : id.tr;
 
 class AppIcon extends StatelessWidget {
   final AppDef app;
@@ -912,11 +916,13 @@ class AppIcon extends StatelessWidget {
                   ),
                 ),
                 child:
-                    app.id == 'market'
+                    (app.id == 'market' || app.id == 'bank')
                         ? ClipRRect(
                           borderRadius: BorderRadius.circular(16),
                           child: Image.asset(
-                            'assets/icon/techmarket.png',
+                            app.id == 'bank'
+                                ? 'assets/icon/luma.jpg'
+                                : 'assets/icon/techmarket.png',
                             fit: BoxFit.cover,
                           ),
                         )

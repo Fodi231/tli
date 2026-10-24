@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+import 'package:crypto/crypto.dart';
+import 'bank/luma_models.dart';
+export 'bank/luma_models.dart';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
@@ -20,7 +23,10 @@ import 'wallpaper_cfg.dart';
 import 'wallpapers.dart';
 import 'window_service.dart';
 
+part 'bank/luma_state.dart';
+
 class GameState extends ChangeNotifier {
+  LumaState luma = LumaState();
   final Random _rng = Random();
   SharedPreferences? _prefs;
   Timer? _timer;
@@ -103,6 +109,9 @@ class GameState extends ChangeNotifier {
   double get netWorth =>
       balance +
       invested +
+      luma.saved +
+      luma.deposited +
+      luma.business +
       stock.fold(0.0, (s, e) => s + e.resaleValue) -
       loan -
       taxDue;
@@ -195,6 +204,9 @@ class GameState extends ChangeNotifier {
   }
 
   void _load(Map<String, dynamic> j) {
+    luma = LumaState.fromJson(
+      Map<String, dynamic>.from(j['luma'] as Map? ?? {}),
+    );
     balance = (j['balance'] as num? ?? balance).toDouble();
     reputation = (j['rep'] as num? ?? reputation).toDouble();
     cityIndex = ((j['city'] as int?) ?? 0).clamp(0, cities.length - 1).toInt();
@@ -352,6 +364,7 @@ class GameState extends ChangeNotifier {
   }
 
   Map<String, dynamic> _toJson() => {
+    'luma': luma.toJson(),
     'balance': balance,
     'rep': reputation,
     'city': cityIndex,
@@ -425,6 +438,7 @@ class GameState extends ChangeNotifier {
 
   Future<void> resetAll() async {
     await _prefs?.remove('save');
+    luma = LumaState();
     balance = 1500;
     liquidGlass = true;
     reputation = 4.0;
@@ -588,6 +602,7 @@ class GameState extends ChangeNotifier {
     totalEarned += amt;
     taxDue += amt * 0.1;
     txns.insert(0, Txn(title, amt));
+    _lumaAutoSave(amt);
   }
 
   void _spend(String title, double amt) {
@@ -623,7 +638,7 @@ class GameState extends ChangeNotifier {
       spawnDeal('buy');
     }
     if (invested > 0) invested *= 1 + (_rng.nextDouble() * 0.05 - 0.02);
-    if (loan > 0) loan *= 1.002;
+    _lumaTick();
     _changed();
   }
 
@@ -841,8 +856,12 @@ class GameState extends ChangeNotifier {
 
   // ---------------------------------------------------------------- shop
   bool buyPart(Product p) {
-    if (balance < p.price) return false;
+    if (balance < p.price ||
+        (luma.opened && !canLumaPay(p.price, internet: true))) {
+      return false;
+    }
     _spend('${'part_${p.cat}'.tr} · ${p.device}', p.price);
+    if (luma.opened) luma.spentToday = cents(luma.spentToday + p.price);
     parts[p.cat] = (parts[p.cat] ?? 0) + 1;
     _changed();
     return true;
@@ -1269,7 +1288,7 @@ class GameState extends ChangeNotifier {
     }
     final persona =
         'Write only the next chat message from ${d.counterpart}, an ordinary ${d.kind == "buy" ? "private seller" : "buyer"} on a classifieds app. '
-        'Device: ${d.item}. Listing facts: ${d.description}. Declared defect: ${d.fault ?? "none"}. '
+        'Authoritative current price: \$${(d.counterPrice ?? d.currentPrice).toInt()}. Never invent a different price. Device: ${d.item}. Listing facts: ${d.description}. Declared defect: ${d.fault ?? "none"}. '
         'Reply in ${AiService.langName(lang)}, in 1-3 natural short sentences, remembering the conversation. '
         'Be ${d.counterpart.length.isEven ? "friendly and practical" : "concise and a little cautious"}. '
         'Answer device-condition questions truthfully from the facts; never invent tests, repairs, extra accessories or payments. '
@@ -1294,7 +1313,7 @@ class GameState extends ChangeNotifier {
           'lang': lang,
           'name': d.counterpart,
           'outcome': outcome,
-          'amount': number,
+          'amount': number ?? d.counterPrice ?? d.currentPrice,
         },
       );
     } else {
@@ -1317,8 +1336,39 @@ class GameState extends ChangeNotifier {
     }
     lastAiError = result.error;
     lastAiMs = result.ms;
+    final expectedPrice = number ?? d.counterPrice ?? d.currentPrice;
+    final currencyAmounts =
+        RegExp(r'(?:\$\s*(\d+(?:[.,]\d+)?)|(\d+(?:[.,]\d+)?)\s*\$)')
+            .allMatches(result.text)
+            .map((m) => double.tryParse((m[1] ?? m[2]!).replaceAll(',', '.')))
+            .toList();
+    final wrongPrice = currencyAmounts.any((amount) => amount != expectedPrice);
+    final omitsDecisionPrice =
+        (outcome == 'counter' || outcome == 'accept') &&
+        !currencyAmounts.contains(expectedPrice);
+    final unsupportedPriceWords =
+        currencyAmounts.isEmpty &&
+        RegExp(
+          r'(?:отдам|минимум|цена|меньше|price|asking|minimum).{0,30}(?:\d|сот|тысяч|hundred|thousand)',
+          caseSensitive: false,
+        ).hasMatch(result.text);
+    final pricingQuestion =
+        outcome == 'chat' &&
+        RegExp(
+          r'цен|за\s+скольк|скольк\w*\s+(?:стоит|просишь|хочешь)|почём|почем|price|how much|вартіст|скільки\s+коштує',
+          caseSensitive: false,
+        ).hasMatch(text);
+    final unsupportedMeeting = RegExp(
+      r'адрес|метро|подъе|встреч|забер|meet|address|pick.?up',
+      caseSensitive: false,
+    ).hasMatch(result.text);
     final breaksRole =
         AiService.breaksCharacter(result.text) ||
+        wrongPrice ||
+        unsupportedPriceWords ||
+        omitsDecisionPrice ||
+        pricingQuestion ||
+        unsupportedMeeting ||
         (!result.ok && outcome == 'chat');
     final reply =
         breaksRole
@@ -1348,6 +1398,19 @@ class GameState extends ChangeNotifier {
             : lang == 'uk'
             ? uk
             : ru;
+    if (RegExp(
+      r'цен|за\s+скольк|скольк\w*\s+(?:стоит|просишь|хочешь)|почём|почем|price|how much|вартіст|скільки\s+коштує',
+      caseSensitive: false,
+    ).hasMatch(q)) {
+      final amount = (d.counterPrice ?? d.currentPrice).toInt();
+      final fault =
+          d.fault == null ? '' : (services[d.fault]?.nameKey.tr ?? d.fault!);
+      return say(
+        '${d.item}, цена \$$amount.${fault.isEmpty ? "" : " Нужен ремонт: $fault."}',
+        '${d.item}, \$$amount.${fault.isEmpty ? "" : " Needs repair: $fault."}',
+        '${d.item}, ціна \$$amount.${fault.isEmpty ? "" : " Потрібен ремонт: $fault."}',
+      );
+    }
     if (d.kind == 'sell') {
       return say(
         'Интересует состояние и есть ли торг?',
@@ -1428,11 +1491,13 @@ class GameState extends ChangeNotifier {
       return false;
     }
     if (d.kind == 'buy') {
-      if (balance < d.price ||
+      if ((luma.opened && !canLumaPay(d.price, internet: true)) ||
+          balance < d.price ||
           (d.listingId != null && purchasedListings.contains(d.listingId))) {
         return false;
       }
       _spend('deal_buy'.tr, d.price);
+      if (luma.opened) luma.spentToday = cents(luma.spentToday + d.price);
       stock.add(
         StockItem(
           nextId(),

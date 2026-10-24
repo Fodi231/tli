@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 /// Local simulation of the repaired device. Never changes the host's radios.
 enum DevicePower { on, asleep, shuttingDown, off, booting }
 
@@ -312,4 +314,11 @@ class DeviceRuntime {
     calculator = j['calc'] as String? ?? '0';
     stopwatchMs = (j['stopwatch'] as num? ?? 0).toInt().clamp(0, 86400000);
   }
+}
+
+/// Projected footprint: the moving leaf turns edge-on before extending the panel.
+double projectedFoldWidth(double stage, double panel) {
+  final fraction = stage - stage.floor();
+  return panel *
+      (1 + stage.floor() + math.max(0.0, math.cos(math.pi * (1 - fraction))));
 }

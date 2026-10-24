@@ -1,2 +1,2 @@
 const String kAppName = 'TechLife';
-const String kAppVersion = '0.10.0';
+const String kAppVersion = '0.12.0';

@@ -166,7 +166,7 @@ class Deal {
           ? ((limit + (ask - limit) * .35) / 5).round() * 5.0
           : (limit / 5).round() * 5.0;
   final List<ChatMsg> messages = [];
-  double get currentPrice => price > 0 ? price : ask;
+  double get currentPrice => price > 0 ? price : (counterPrice ?? ask);
   int get unreadMessages =>
       messages
           .skip(readMessageCount.clamp(0, messages.length))

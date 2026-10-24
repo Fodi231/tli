@@ -124,16 +124,33 @@ class _DeviceLabState extends State<DeviceLab> {
   }
 
   bool folding = false;
+  int foldFrom = 0;
   void fold() {
     if (widget.session.isOpen || folding) return;
     folding = true;
+    foldFrom = r.foldStage;
     Future<void>.delayed(const Duration(milliseconds: 850), () {
       if (mounted) setState(() => folding = false);
     });
+    _captureFoldTexture();
+    for (final ms in [400, 500, 600, 700, 800]) {
+      Future<void>.delayed(Duration(milliseconds: ms), () {
+        if (!mounted) return;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && folding) _captureFoldTexture();
+        });
+      });
+    }
+    change(() => r.setFold((r.foldStage + 1) % spec.panels, spec.panels));
+  }
+
+  int textureVersion = 0;
+  void _captureFoldTexture() {
+    final request = ++textureVersion;
     final boundary = _liveScreen.currentContext?.findRenderObject();
     if (boundary is RenderRepaintBoundary && !boundary.debugNeedsPaint) {
       boundary.toImage(pixelRatio: .8).then((img) {
-        if (!mounted) {
+        if (!mounted || request != textureVersion) {
           img.dispose();
           return;
         }
@@ -143,7 +160,6 @@ class _DeviceLabState extends State<DeviceLab> {
         });
       });
     }
-    change(() => r.setFold((r.foldStage + 1) % spec.panels, spec.panels));
   }
 
   String tr(String ru, String en, String uk) => mt(ru, en, uk);
@@ -216,9 +232,11 @@ class _DeviceLabState extends State<DeviceLab> {
               Expanded(
                 child: LayoutBuilder(
                   builder:
-                      (context, c) => InteractiveViewer(
-                        minScale: 1,
-                        maxScale: 2.4,
+                      (context, c) => _StableFoldViewport(
+                        panels: spec.panels,
+                        aspect: spec.closedAspect,
+                        minScale: .5,
+                        maxScale: 3.5,
                         child: Center(
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
@@ -235,70 +253,126 @@ class _DeviceLabState extends State<DeviceLab> {
                               builder: (context, stage, _) {
                                 const height = 620.0;
                                 final panel = height * spec.closedAspect;
-                                final width = panel * (1 + stage);
+                                final width = projectedFoldWidth(stage, panel);
                                 return FittedBox(
                                   fit: BoxFit.contain,
                                   child: SizedBox(
-                                    width: width + 64,
+                                    width: panel * spec.panels + 64,
                                     height: height + 8,
-                                    child: Stack(
-                                      clipBehavior: Clip.none,
-                                      children: [
-                                        Positioned(
-                                          left: 32,
-                                          top: 0,
-                                          width: width,
-                                          height: height,
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              borderRadius:
-                                                  BorderRadius.circular(
-                                                    apple ? 35 : 24,
-                                                  ),
-                                              gradient: const LinearGradient(
-                                                begin: Alignment.topLeft,
-                                                end: Alignment.bottomRight,
-                                                colors: [
-                                                  Color(0xFFD8DDE2),
-                                                  Color(0xFF485260),
-                                                  Color(0xFF9DA7AF),
-                                                  Color(0xFF303C49),
-                                                ],
-                                              ),
-                                              boxShadow: const [
-                                                BoxShadow(
-                                                  color: Colors.black87,
-                                                  blurRadius: 28,
-                                                  offset: Offset(0, 20),
-                                                ),
-                                              ],
-                                            ),
-                                            padding: const EdgeInsets.all(7),
-                                            child: ClipRRect(
-                                              borderRadius:
-                                                  BorderRadius.circular(
-                                                    apple ? 29 : 19,
-                                                  ),
-                                              child: Stack(
-                                                children: [
-                                                  Positioned.fill(
-                                                    child: RepaintBoundary(
-                                                      key: _liveScreen,
-                                                      child: _screen(),
+                                    child: Center(
+                                      child: SizedBox(
+                                        width: width + 64,
+                                        height: height + 8,
+                                        child: Stack(
+                                          clipBehavior: Clip.none,
+                                          children: [
+                                            Positioned(
+                                              left: 32,
+                                              top: 0,
+                                              width: width,
+                                              height: height,
+                                              child: Container(
+                                                decoration: BoxDecoration(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                        apple ? 35 : 24,
+                                                      ),
+                                                  gradient:
+                                                      const LinearGradient(
+                                                        begin:
+                                                            Alignment.topLeft,
+                                                        end:
+                                                            Alignment
+                                                                .bottomRight,
+                                                        colors: [
+                                                          Color(0xFFD8DDE2),
+                                                          Color(0xFF485260),
+                                                          Color(0xFF9DA7AF),
+                                                          Color(0xFF303C49),
+                                                        ],
+                                                      ),
+                                                  boxShadow: const [
+                                                    BoxShadow(
+                                                      color: Colors.black87,
+                                                      blurRadius: 28,
+                                                      offset: Offset(0, 20),
                                                     ),
-                                                  ),
-                                                  if (stage > 0)
-                                                    for (
-                                                      var i = 1;
-                                                      i < spec.panels;
-                                                      i++
-                                                    )
-                                                      if (stage > i - 1)
+                                                  ],
+                                                ),
+                                                padding: const EdgeInsets.all(
+                                                  7,
+                                                ),
+                                                child: ClipRRect(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                        apple ? 29 : 19,
+                                                      ),
+                                                  child: Stack(
+                                                    children: [
+                                                      Positioned.fill(
+                                                        child: RepaintBoundary(
+                                                          key: _liveScreen,
+                                                          child: _screen(),
+                                                        ),
+                                                      ),
+                                                      if (stage > 0)
+                                                        for (
+                                                          var i = 1;
+                                                          i < spec.panels;
+                                                          i++
+                                                        )
+                                                          if (stage > i - 1)
+                                                            Positioned(
+                                                              left:
+                                                                  panel * i - 7,
+                                                              top: 0,
+                                                              bottom: 0,
+                                                              width: 14,
+                                                              child: IgnorePointer(
+                                                                child: DecoratedBox(
+                                                                  decoration: BoxDecoration(
+                                                                    gradient: LinearGradient(
+                                                                      colors: [
+                                                                        Colors
+                                                                            .transparent,
+                                                                        Colors.black.withValues(
+                                                                          alpha:
+                                                                              .2 +
+                                                                              (1 -
+                                                                                      (stage -
+                                                                                              i +
+                                                                                              1)
+                                                                                          .clamp(0, 1)) *
+                                                                                  .35,
+                                                                        ),
+                                                                        Colors.white.withValues(
+                                                                          alpha:
+                                                                              .05,
+                                                                        ),
+                                                                        Colors
+                                                                            .transparent,
+                                                                      ],
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ),
+                                                      if (stage > 0 &&
+                                                          (stage - stage.floor())
+                                                                  .abs() >
+                                                              .01)
                                                         Positioned(
-                                                          left: panel * i - 7,
+                                                          right: 0,
                                                           top: 0,
                                                           bottom: 0,
-                                                          width: 14,
+                                                          width:
+                                                              panel *
+                                                                  (1 -
+                                                                      (stage -
+                                                                          stage
+                                                                              .floor())) *
+                                                                  .45 +
+                                                              1,
                                                           child: IgnorePointer(
                                                             child: DecoratedBox(
                                                               decoration: BoxDecoration(
@@ -306,108 +380,69 @@ class _DeviceLabState extends State<DeviceLab> {
                                                                   colors: [
                                                                     Colors
                                                                         .transparent,
-                                                                    Colors.black.withValues(
-                                                                      alpha:
-                                                                          .2 +
-                                                                          (1 -
-                                                                                  (stage -
-                                                                                          i +
-                                                                                          1)
-                                                                                      .clamp(0, 1)) *
-                                                                              .35,
-                                                                    ),
-                                                                    Colors.white
+                                                                    Colors.black
                                                                         .withValues(
                                                                           alpha:
-                                                                              .05,
+                                                                              .46,
                                                                         ),
-                                                                    Colors
-                                                                        .transparent,
                                                                   ],
                                                                 ),
                                                               ),
                                                             ),
                                                           ),
                                                         ),
-                                                  if (stage > 0 &&
-                                                      (stage - stage.floor())
-                                                              .abs() >
-                                                          .01)
-                                                    Positioned(
-                                                      right: 0,
-                                                      top: 0,
-                                                      bottom: 0,
-                                                      width:
-                                                          panel *
-                                                              (1 -
-                                                                  (stage -
-                                                                      stage
-                                                                          .floor())) *
-                                                              .45 +
-                                                          1,
-                                                      child: IgnorePointer(
-                                                        child: DecoratedBox(
-                                                          decoration: BoxDecoration(
-                                                            gradient: LinearGradient(
-                                                              colors: [
-                                                                Colors
-                                                                    .transparent,
-                                                                Colors.black
-                                                                    .withValues(
-                                                                      alpha:
-                                                                          .46,
-                                                                    ),
-                                                              ],
+                                                      if (stage > .001 &&
+                                                          (stage - stage.round())
+                                                                  .abs() >
+                                                              .001)
+                                                        Positioned.fill(
+                                                          child: IgnorePointer(
+                                                            child: CustomPaint(
+                                                              painter:
+                                                                  _FoldMotion(
+                                                                    stage,
+                                                                    panel,
+                                                                    spec.panels,
+                                                                    _foldImage,
+                                                                  ),
                                                             ),
                                                           ),
                                                         ),
-                                                      ),
-                                                    ),
-                                                  if (stage > .001 &&
-                                                      (stage - stage.round())
-                                                              .abs() >
-                                                          .001)
-                                                    Positioned.fill(
-                                                      child: IgnorePointer(
-                                                        child: CustomPaint(
-                                                          painter: _FoldMotion(
-                                                            stage,
-                                                            panel,
-                                                            spec.panels,
-                                                            _foldImage,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                ],
+                                                    ],
+                                                  ),
+                                                ),
                                               ),
                                             ),
-                                          ),
+                                            Positioned(
+                                              left: 4,
+                                              top: 110,
+                                              child: _hardware(
+                                                'up',
+                                                Icons.add,
+                                                60,
+                                              ),
+                                            ),
+                                            Positioned(
+                                              left: 4,
+                                              top: 187,
+                                              child: _hardware(
+                                                'down',
+                                                Icons.remove,
+                                                60,
+                                              ),
+                                            ),
+                                            Positioned(
+                                              right: 3,
+                                              top: 140,
+                                              child: _hardware(
+                                                'side',
+                                                Icons.power_settings_new,
+                                                88,
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                        Positioned(
-                                          left: 4,
-                                          top: 110,
-                                          child: _hardware('up', Icons.add, 60),
-                                        ),
-                                        Positioned(
-                                          left: 4,
-                                          top: 187,
-                                          child: _hardware(
-                                            'down',
-                                            Icons.remove,
-                                            60,
-                                          ),
-                                        ),
-                                        Positioned(
-                                          right: 3,
-                                          top: 140,
-                                          child: _hardware(
-                                            'side',
-                                            Icons.power_settings_new,
-                                            88,
-                                          ),
-                                        ),
-                                      ],
+                                      ),
                                     ),
                                   ),
                                 );
@@ -1018,7 +1053,7 @@ class _DeviceLabState extends State<DeviceLab> {
           child: GridView.builder(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: r.foldStage > 0 ? 6 : 4,
+              crossAxisCount: (folding ? foldFrom : r.foldStage) > 0 ? 6 : 4,
               mainAxisSpacing: 12,
               crossAxisSpacing: 4,
               mainAxisExtent: 88,
@@ -1986,17 +2021,13 @@ class _FoldMotion extends CustomPainter {
         ),
     );
     final img = image;
-    if (img != null && math.cos(angle) >= 0 && (end - hinge).abs() > 2) {
+    if (img != null &&
+        math.cos(angle) >= 0 &&
+        (end - hinge).abs() > 2 &&
+        img.width > hinge * img.height / s.height + 2) {
       final iw = img.width.toDouble(), ih = img.height.toDouble();
-      final uv =
-          math.cos(angle) < 0
-              ? [Offset(iw, 0), Offset.zero, Offset(0, ih), Offset(iw, ih)]
-              : [
-                Offset(iw * .5, 0),
-                Offset(iw, 0),
-                Offset(iw, ih),
-                Offset(iw * .5, ih),
-              ];
+      final u = (hinge * ih / s.height).clamp(0.0, iw);
+      final uv = [Offset(u, 0), Offset(iw, 0), Offset(iw, ih), Offset(u, ih)];
       c.save();
       c.clipPath(path);
       c.drawVertices(
@@ -2115,4 +2146,60 @@ class _CrackPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter old) => false;
+}
+
+/// Fixed camera: hinges alter physical footprint, never the global zoom.
+class _StableFoldViewport extends StatefulWidget {
+  final Widget child;
+  final int panels;
+  final double aspect, minScale, maxScale;
+  const _StableFoldViewport({
+    required this.child,
+    required this.panels,
+    required this.aspect,
+    required this.minScale,
+    required this.maxScale,
+  });
+  @override
+  State<_StableFoldViewport> createState() => _StableFoldViewportState();
+}
+
+class _StableFoldViewportState extends State<_StableFoldViewport> {
+  final camera = TransformationController();
+  Size? previous;
+  @override
+  void dispose() {
+    camera.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, c) {
+      if (previous != c.biggest) {
+        previous = c.biggest;
+        final w = math.max(1.0, c.maxWidth - 20),
+            h = math.max(1.0, c.maxHeight - 16);
+        final panel = 620 * widget.aspect;
+        final fit = math.min(w / (panel * widget.panels + 64), h / 628);
+        final closed = math.min(w / (panel + 64), h / 628);
+        final zoom = (closed / fit).clamp(widget.minScale, widget.maxScale);
+        camera.value =
+            Matrix4.identity()
+              ..translateByDouble(
+                c.maxWidth * (1 - zoom) / 2,
+                c.maxHeight * (1 - zoom) / 2,
+                0,
+                1,
+              )
+              ..scaleByDouble(zoom, zoom, 1, 1);
+      }
+      return InteractiveViewer(
+        transformationController: camera,
+        minScale: widget.minScale,
+        maxScale: widget.maxScale,
+        child: widget.child,
+      );
+    },
+  );
 }

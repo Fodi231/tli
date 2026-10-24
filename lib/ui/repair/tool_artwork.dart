@@ -14,18 +14,15 @@ class ToolArtwork extends StatelessWidget {
         child: CustomPaint(painter: _ToolPainter(tool)),
       );
     }
-    return Container(
+    return SizedBox(
       width: size,
       height: size,
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F7),
-        borderRadius: BorderRadius.circular(9),
-      ),
       child: Image.asset(
-        'assets/repair/tools/${tool.name}.jpg',
+        'assets/repair/tools/${tool.name}_icon.png',
         fit: BoxFit.contain,
         filterQuality: FilterQuality.high,
+        cacheWidth: 192,
+        gaplessPlayback: true,
       ),
     );
   }

@@ -2,7 +2,7 @@
 /// Device model numbers, storage sizes and questions never count as offers.
 double? chatPrice(String text) {
   final match = RegExp(
-    r'^\s*(?:(?:предлагаю|дам|за|пропоную|i offer|offer|how about)\s+)?[$€]?\s*(\d+(?:[.,]\d{1,2})?)\s*[$€]?\s*[.!]?\s*$',
+    r'^\s*(?:(?:предлагаю|дам|за|давай|ну давай|ну за|ладно за|пропоную|давай за|i offer|offer|how about)\s+)?[$€]?\s*(\d+(?:[.,]\d{1,2})?)\s*[$€]?\s*[.!]?\s*$',
     caseSensitive: false,
   ).firstMatch(text);
   return match == null
@@ -26,6 +26,10 @@ bool acceptsCounter(String text) {
     'ок',
     'окей',
     'ладно',
+    'ладно давай',
+    'ну давай',
+    'ок давай',
+    'да беру',
     'согласен',
     'согласна',
     'договорились',

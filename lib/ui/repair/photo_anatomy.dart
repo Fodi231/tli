@@ -7,10 +7,12 @@ class AnatomySpec {
   final List<Offset> quad;
   final Map<String, Rect> sprites;
   final bool separateParts;
+  final String? asset;
   const AnatomySpec(
     this.quad, {
     this.sprites = const {},
     this.separateParts = false,
+    this.asset,
   });
 }
 
@@ -65,29 +67,18 @@ const anatomySpecs = <String, AnatomySpec>{
     Offset(.833, .9),
     Offset(.34, .9097),
   ]),
-  'galaxyfold7': AnatomySpec(
-    [
-      Offset(.395, .315),
-      Offset(.607, .315),
-      Offset(.607, .665),
-      Offset(.395, .665),
-    ],
-    separateParts: true,
-    sprites: {
-      'battery': Rect.fromLTWH(.328, .53, .105, .195),
-      'aux_battery_0': Rect.fromLTWH(.561, .25, .132, .26),
-      'camera': Rect.fromLTWH(.219, .453, .055, .068),
-      'board': Rect.fromLTWH(.272, .352, .102, .15),
-      'port': Rect.fromLTWH(.233, .628, .04, .08),
-      'shield': Rect.fromLTWH(.126, .53, .12, .342),
-    },
-  ),
+  'galaxyfold7': AnatomySpec([
+    Offset(.202, .04),
+    Offset(.798, .04),
+    Offset(.798, .331),
+    Offset(.202, .331),
+  ], asset: 'assets/repair/anatomy/clean_fold_chassis.png'),
   'matext': AnatomySpec([
-    Offset(.146, .453),
-    Offset(.566, .05),
-    Offset(.873, .373),
-    Offset(.427, .852),
-  ]),
+    Offset(.028, .646),
+    Offset(.973, .646),
+    Offset(.973, .931),
+    Offset(.028, .931),
+  ], asset: 'assets/repair/anatomy/clean_fold_chassis.png'),
 };
 
 class PhotoAnatomy {
@@ -154,7 +145,9 @@ class PhotoAnatomy {
   static final Map<String, Future<PhotoAnatomy>> _cache = {};
   static Future<PhotoAnatomy> load(String id) =>
       _cache.putIfAbsent(id, () async {
-        final bytes = await rootBundle.load('assets/repair/anatomy/$id.jpg');
+        final bytes = await rootBundle.load(
+          anatomySpecs[id]?.asset ?? 'assets/repair/anatomy/$id.jpg',
+        );
         final codec = await ui.instantiateImageCodec(
           bytes.buffer.asUint8List(),
           targetWidth: 1200,
@@ -248,22 +241,29 @@ class PhotoAnatomy {
 
   void body(Canvas c, Rect r, DeviceProfile profile) {
     c.save();
-    c.clipRRect(RRect.fromRectAndRadius(r, const Radius.circular(18)));
-    region(c, r, const Rect.fromLTWH(0, 0, 1, 1));
-    if (exposed != null) {
-      final b = profile.battery;
-      part(
-        c,
-        profile,
-        'battery',
-        Rect.fromLTWH(
-          r.left + b.x / 224 * r.width,
-          r.top + b.y / 438 * r.height,
-          b.w / 224 * r.width,
-          b.h / 438 * r.height,
-        ),
+    final shell =
+        Path()..addRRect(RRect.fromRectAndRadius(r, const Radius.circular(18)));
+    var holes = Path();
+    final fullWidth = 224.0 * profile.segments;
+    for (final b in [
+      profile.battery,
+      ...profile.auxiliaryBatteries,
+      profile.camera,
+      profile.port,
+      profile.shield,
+    ]) {
+      final rect = Rect.fromLTWH(
+        r.left + b.x / fullWidth * r.width,
+        r.top + b.y / 438 * r.height,
+        b.w / fullWidth * r.width,
+        b.h / 438 * r.height,
+      ).inflate(
+        identical(b, profile.battery) && profile.segments == 1 ? 12 : 3,
       );
+      holes = Path.combine(PathOperation.union, holes, Path()..addRect(rect));
     }
+    c.clipPath(Path.combine(PathOperation.difference, shell, holes));
+    region(c, r, const Rect.fromLTWH(0, 0, 1, 1));
     c.restore();
   }
 

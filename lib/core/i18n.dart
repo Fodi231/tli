@@ -73,7 +73,7 @@ class I18n {
     'mail': ['Почта', 'Mail', 'Пошта'],
     'messages': ['Сообщения', 'Messages', 'Повідомлення'],
     'map': ['Карта', 'Map', 'Мапа'],
-    'bank': ['Банк', 'Bank', 'Банк'],
+    'bank': ['Luma', 'Luma', 'Luma'],
     'shop': ['Магазин', 'Shop', 'Магазин'],
     'repair': ['Ремонт', 'Repair', 'Ремонт'],
     'auctions': ['Аукцион', 'Auctions', 'Аукціон'],

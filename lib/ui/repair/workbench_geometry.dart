@@ -8,11 +8,15 @@ import '../../core/repair/device_profile.dart';
 /// A single coordinate system shared by rendering, hit testing and drop zones.
 class WorkbenchGeometry {
   final bool wide;
-  WorkbenchGeometry(this.wide);
-  Size get size => wide ? const Size(1000, 680) : const Size(700, 820);
-  Rect get phone => Rect.fromLTWH(wide ? 335 : 78, wide ? 104 : 160, 224, 438);
+  final String device;
+  WorkbenchGeometry(this.wide, {this.device = 'iphone13'});
+  int get segments => profileFor(device).segments;
+  double get extra => profileFor(device).bodyWidth - 224;
+  Size get size => wide ? Size(1000 + extra, 680) : Size(700 + extra, 820);
+  Rect get phone =>
+      Rect.fromLTWH(wide ? 335 : 78, wide ? 104 : 160, 224 + extra, 438);
   Rect get parkedDisplay =>
-      Rect.fromLTWH(wide ? 640 : 396, phone.top + 4, 224, 438);
+      Rect.fromLTWH((wide ? 640 : 396) + extra, phone.top + 4, 224, 438);
   Rect get newTray =>
       wide
           ? const Rect.fromLTWH(52, 104, 215, 158)
@@ -28,9 +32,35 @@ class WorkbenchGeometry {
 
   Rect rect(String id, RepairSession s) {
     final p = phone;
+    final horizontal = p.width / (224 * segments);
     Rect at(double x, double y, double w, double h) =>
-        Rect.fromLTWH(p.left + x, p.top + y, w, h);
+        Rect.fromLTWH(p.left + x * horizontal, p.top + y, w * horizontal, h);
     final profile = profileFor(s.device);
+    if (id == 'new_part' &&
+            s.service == 'battery' &&
+            profile.auxiliaryBatteries.isNotEmpty ||
+        id.startsWith('new_aux_')) {
+      final count = profile.auxiliaryBatteries.length + 1;
+      final index = id == 'new_part' ? 0 : int.parse(id.split('_').last) + 1;
+      final area = newTray.deflate(20);
+      return Rect.fromLTWH(
+        area.left + index * area.width / count,
+        area.top + 18,
+        area.width / count - 5,
+        area.height - 24,
+      );
+    }
+    if (id.startsWith('aux_battery_')) {
+      final i = int.tryParse(id.split('_').last) ?? 0;
+      final b =
+          profile.auxiliaryBatteries[i.clamp(
+            0,
+            profile.auxiliaryBatteries.length - 1,
+          )];
+      return id.contains('connector')
+          ? at(b.x + b.w - 25, b.y - 16, 26, 14)
+          : at(b.x, b.y, b.w, b.h);
+    }
     Rect box(PartBox b) => at(b.x, b.y, b.w, b.h);
     if (id == 'battery') return box(profile.battery);
     if (id == 'adhesive_edge') {
@@ -104,6 +134,14 @@ class WorkbenchGeometry {
       );
     }
     switch (id) {
+      case 'edge_top':
+        return at(20, 4, 224.0 * segments - 40, 20);
+      case 'edge_bottom':
+        return at(20, 414, 224.0 * segments - 40, 20);
+      case 'edge_left':
+        return at(4, 24, 20, 388);
+      case 'edge_right':
+        return at(224.0 * segments - 24, 24, 20, 388);
       case 'screen':
         return s.isOpen ? parkedDisplay : p.deflate(8);
       case 'front_display':
@@ -121,7 +159,7 @@ class WorkbenchGeometry {
       case 'stored_shield':
         return partsTray.deflate(28);
       case 'power':
-        return at(211, 85, 24, 62);
+        return at(224.0 * segments - 13, 85, 24, 62);
       case 'frame_0':
         return at(49, 421, 18, 18);
       case 'frame_1':

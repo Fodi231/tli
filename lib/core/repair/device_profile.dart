@@ -20,6 +20,8 @@ class DeviceProfile {
   final double batterySocketX, batterySocketY, displaySocketX, displaySocketY;
   final bool rearAccess, lBattery;
   final int shieldScrews;
+  final int segments;
+  final List<PartBox> auxiliaryBatteries;
   const DeviceProfile({
     required this.id,
     required this.batteryCode,
@@ -37,6 +39,8 @@ class DeviceProfile {
     this.lBattery = false,
     this.shieldScrews = 3,
     this.portType = 'Lightning',
+    this.segments = 1,
+    this.auxiliaryBatteries = const [],
   });
   int get adhesiveTabs => switch (id) {
     'iphone11' => 6,
@@ -48,10 +52,15 @@ class DeviceProfile {
   };
   bool get pixel => id == 'pixel7';
   bool get apple => id.startsWith('iphone');
-  bool get frameScrews => apple;
+  bool get frameScrews => apple && !rearAccess;
+  double get bodyWidth => id == 'iphoneduo' ? 626.4 : segments * 224.0;
   int get batteryMah => deviceFor(id)!.batteryMah;
   PartBox get port =>
-      rearAccess
+      id == 'iphoneduo'
+          ? const PartBox(74, 393, 113, 28)
+          : segments > 1
+          ? PartBox(224.0 * (segments - 1) + 30, 382, 162, 35)
+          : rearAccess
           ? const PartBox(31, 378, 162, 39)
           : const PartBox(30, 389, 162, 29);
   PartBox connector(String type) {
@@ -174,6 +183,66 @@ const repairProfiles = <DeviceProfile>[
     batterySocketY: 211,
     displaySocketX: 43,
     displaySocketY: 178,
+    shieldScrews: 6,
+    portType: 'USB-C',
+  ),
+  DeviceProfile(
+    id: 'iphoneduo',
+    batteryCode: 'Dual battery',
+    access: 'rear',
+    segments: 2,
+    battery: PartBox(17, 130, 173, 236),
+    auxiliaryBatteries: [PartBox(249, 76, 175, 288)],
+    camera: PartBox(17, 20, 114, 89),
+    board: PartBox(143, 102, 74, 160),
+    shield: PartBox(153, 133, 58, 140),
+    lenses: [Lens(.25, .5, .22), Lens(.73, .5, .22)],
+    batterySocketX: 151,
+    batterySocketY: 270,
+    displaySocketX: 174,
+    displaySocketY: 225,
+    rearAccess: true,
+    shieldScrews: 6,
+    portType: 'USB-C',
+  ),
+  DeviceProfile(
+    id: 'galaxyfold7',
+    batteryCode: 'Dual battery · 4400 mAh',
+    access: 'rear',
+    segments: 2,
+    battery: PartBox(24, 143, 174, 229),
+    auxiliaryBatteries: [PartBox(252, 153, 174, 216)],
+    camera: PartBox(249, 24, 57, 116),
+    board: PartBox(313, 22, 111, 114),
+    shield: PartBox(247, 130, 180, 245),
+    lenses: [Lens(.5, .17, .28), Lens(.5, .50, .28), Lens(.5, .83, .28)],
+    batterySocketX: 166,
+    batterySocketY: 129,
+    displaySocketX: 322,
+    displaySocketY: 133,
+    rearAccess: true,
+    shieldScrews: 6,
+    portType: 'USB-C',
+  ),
+  DeviceProfile(
+    id: 'matext',
+    batteryCode: 'Distributed battery · 5600 mAh',
+    access: 'rear',
+    segments: 3,
+    battery: PartBox(22, 122, 178, 249),
+    auxiliaryBatteries: [
+      PartBox(246, 141, 178, 229),
+      PartBox(474, 171, 176, 199),
+    ],
+    camera: PartBox(468, 22, 105, 126),
+    board: PartBox(575, 24, 75, 132),
+    shield: PartBox(468, 158, 184, 220),
+    lenses: [Lens(.27, .25, .21), Lens(.74, .25, .21), Lens(.5, .72, .23)],
+    batterySocketX: 166,
+    batterySocketY: 109,
+    displaySocketX: 559,
+    displaySocketY: 153,
+    rearAccess: true,
     shieldScrews: 6,
     portType: 'USB-C',
   ),

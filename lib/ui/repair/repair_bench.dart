@@ -6,14 +6,19 @@ import 'package:provider/provider.dart';
 
 import '../../core/catalog.dart';
 import '../../core/market/device_catalog.dart';
+import '../../core/market/market_strings.dart';
 import '../../core/game_state.dart';
 import '../../core/i18n.dart';
 import '../../core/repair/repair_session.dart';
+import '../../core/repair/device_profile.dart';
 import '../../core/repair/repair_strings.dart';
 import '../shell.dart';
 import '../widgets.dart';
 import 'workbench_geometry.dart';
 import 'workbench_painter.dart';
+import 'photo_anatomy.dart';
+import 'device_lab.dart';
+import 'tool_artwork.dart';
 
 IconData repairToolIcon(RepairTool tool) => switch (tool) {
   RepairTool.hand => Icons.pan_tool_alt_outlined,
@@ -24,6 +29,8 @@ IconData repairToolIcon(RepairTool tool) => switch (tool) {
   RepairTool.tweezers => Icons.content_cut,
   RepairTool.meter => Icons.speed_outlined,
   RepairTool.solvent => Icons.water_drop_outlined,
+  RepairTool.pick => Icons.change_history,
+  RepairTool.adhesive => Icons.album_outlined,
 };
 
 class RepairBench extends StatefulWidget {
@@ -57,6 +64,11 @@ class _RepairBenchState extends State<RepairBench> {
   }
 
   void _exit() => context.read<Shell>().open('repair');
+  void _inspect(RepairSession s) => showDeviceLab(
+    context,
+    s,
+    () => context.read<GameState>().saveRepairDevice(widget.orderId),
+  );
   void _act(
     String target,
     RepairGesture gesture, {
@@ -83,6 +95,9 @@ class _RepairBenchState extends State<RepairBench> {
       if (result.outcome == RepairOutcome.mistake) {
         HapticFeedback.mediumImpact();
       }
+    }
+    if (result.message == 'r_use_shutdown' || result.message == 'r_use_boot') {
+      _inspect(gs.repairs[widget.orderId]!);
     }
     if (result.message == 'r_missing_part') {
       showDialog<void>(
@@ -164,6 +179,8 @@ class _RepairBenchState extends State<RepairBench> {
                 LogicalKeyboardKey.digit6,
                 LogicalKeyboardKey.digit7,
                 LogicalKeyboardKey.digit8,
+                LogicalKeyboardKey.digit9,
+                LogicalKeyboardKey.digit0,
               ][i],
             ): () {
               _sceneKey.currentState?.cancelInteraction();
@@ -267,6 +284,7 @@ class _RepairBenchState extends State<RepairBench> {
                                                 session: s,
                                                 device: device,
                                                 onAction: _act,
+                                                onInspect: () => _inspect(s),
                                               ),
                                             ),
                                             Positioned(
@@ -435,6 +453,17 @@ class _RepairBenchState extends State<RepairBench> {
                                       runSpacing: 8,
                                       alignment: WrapAlignment.center,
                                       children: [
+                                        OutlinedButton.icon(
+                                          onPressed: () => _inspect(s),
+                                          icon: const Icon(Icons.smartphone),
+                                          label: Text(
+                                            mt(
+                                              'Проверить телефон',
+                                              'Inspect phone',
+                                              'Перевірити телефон',
+                                            ),
+                                          ),
+                                        ),
                                         if (s.training)
                                           OutlinedButton(
                                             onPressed: () {
@@ -533,10 +562,17 @@ class _RepairBenchState extends State<RepairBench> {
           icon: const Icon(Icons.help_outline, size: 22),
         ),
         IconButton(
-          tooltip: 'shop'.tr,
-          onPressed: () => context.read<Shell>().open('shop'),
-          icon: const Icon(Icons.storefront_outlined, size: 22),
+          key: const ValueKey('device_inspect'),
+          tooltip: mt('Осмотр и ОС', 'Inspect device OS', 'Огляд та ОС'),
+          onPressed: () => _inspect(s),
+          icon: const Icon(Icons.smartphone_rounded, size: 22),
         ),
+        if (width >= 400)
+          IconButton(
+            tooltip: 'shop'.tr,
+            onPressed: () => context.read<Shell>().open('shop'),
+            icon: const Icon(Icons.storefront_outlined, size: 22),
+          ),
       ],
     ),
   );
@@ -595,13 +631,38 @@ class _RepairBenchState extends State<RepairBench> {
         if (s.hints && current != null)
           Padding(
             padding: EdgeInsets.only(top: compact ? 3 : 7),
-            child: Text(
-              rt(current.hintKey),
-              maxLines: expanded ? 4 : 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: compact ? 11 : 12,
-                color: const Color(0xFFC4D3DD),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (!compact) ...[
+                  ToolArtwork(current.tool, size: 34),
+                  const SizedBox(width: 10),
+                ],
+                Expanded(
+                  child: Text(
+                    rt(current.hintKey),
+                    maxLines: expanded ? 4 : 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: compact ? 11 : 12,
+                      color: const Color(0xFFC4D3DD),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        if (current != null &&
+            (current.id == 'power_off' || current.id == 'test'))
+          Padding(
+            padding: const EdgeInsets.only(top: 7),
+            child: FilledButton.icon(
+              key: const ValueKey('device_inspect_hint'),
+              onPressed: () => _inspect(s),
+              icon: const Icon(Icons.smartphone, size: 17),
+              label: Text(
+                mt('Осмотр и ОС', 'Inspect device OS', 'Огляд та ОС'),
+                style: TextStyle(fontSize: compact ? 11 : 13),
               ),
             ),
           ),
@@ -716,7 +777,7 @@ class _RepairBenchState extends State<RepairBench> {
                       padding: const EdgeInsets.symmetric(horizontal: 2),
                       child: Tooltip(
                         message:
-                            '${tool.index + 1} · ${rt('r_tool_${tool.name}')}',
+                            '${(tool.index + 1) % 10} · ${rt('r_tool_${tool.name}')}',
                         child: InkWell(
                           key: ValueKey('tool_${tool.name}'),
                           borderRadius: BorderRadius.circular(14),
@@ -737,20 +798,15 @@ class _RepairBenchState extends State<RepairBench> {
                                 color:
                                     s.tool == tool
                                         ? benchBlue
+                                        : s.hints && s.current?.tool == tool
+                                        ? benchGreen
                                         : Colors.transparent,
                               ),
                             ),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(
-                                  repairToolIcon(tool),
-                                  size: compact ? 21 : 26,
-                                  color:
-                                      s.tool == tool
-                                          ? benchBlue
-                                          : Colors.white60,
-                                ),
+                                ToolArtwork(tool, size: compact ? 27 : 42),
                                 const SizedBox(height: 4),
                                 Text(
                                   rt('r_tool_${tool.name}'),
@@ -828,11 +884,13 @@ class WorkbenchView extends StatefulWidget {
   final RepairSession session;
   final String device;
   final WorkbenchAction onAction;
+  final VoidCallback? onInspect;
   const WorkbenchView({
     super.key,
     required this.session,
     required this.device,
     required this.onAction,
+    this.onInspect,
   });
   @override
   State<WorkbenchView> createState() => WorkbenchViewState();
@@ -853,7 +911,10 @@ class WorkbenchViewState extends State<WorkbenchView>
       widget.onAction(
         _pressed!,
         RepairGesture.hold,
-        heldMs: RepairSession.holdDurationMs,
+        heldMs:
+            widget.session.heatingStep
+                ? RepairSession.heatDurationMs
+                : RepairSession.holdDurationMs,
       );
     }
   });
@@ -867,6 +928,8 @@ class WorkbenchViewState extends State<WorkbenchView>
       _pinchScene = Offset.zero;
   double _zoom = 1, _pinchStart = 1;
   bool _committed = false, _pinching = false, _moved = false;
+  PhotoAnatomy? _photo;
+  String? _photoId;
   WorkbenchPainter get _painter => WorkbenchPainter(
     geometry: _geometry,
     session: widget.session,
@@ -878,6 +941,7 @@ class WorkbenchViewState extends State<WorkbenchView>
     holdingTarget: _hold.isAnimating ? _pressed : null,
     dragTarget: _drag,
     dragPosition: _dragPosition,
+    photo: _photo,
   );
   @override
   void dispose() {
@@ -890,6 +954,24 @@ class WorkbenchViewState extends State<WorkbenchView>
   void didUpdateWidget(covariant WorkbenchView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!identical(oldWidget.session, widget.session)) cancelInteraction();
+    _loadPhoto();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _loadPhoto();
+  }
+
+  void _loadPhoto() {
+    final id = profileFor(widget.session.device).id;
+    if (_photoId != id) {
+      _photoId = id;
+      _photo = null;
+      PhotoAnatomy.load(id).then((value) {
+        if (mounted && _photoId == id) setState(() => _photo = value);
+      });
+    }
   }
 
   void cancelInteraction() {
@@ -939,6 +1021,12 @@ class WorkbenchViewState extends State<WorkbenchView>
         step.targets.contains(_pressed) &&
         !widget.session.targetDone(_pressed!) &&
         widget.session.tool == step.tool) {
+      _hold.duration = Duration(
+        milliseconds:
+            widget.session.heatingStep
+                ? RepairSession.heatDurationMs
+                : RepairSession.holdDurationMs,
+      );
       _hold.forward(from: 0);
     }
     setState(() {});
@@ -971,8 +1059,25 @@ class WorkbenchViewState extends State<WorkbenchView>
 
   void _pointerUp(PointerUpEvent e) {
     final target = _pressed;
+    if (!_moved &&
+        !_committed &&
+        target == 'screen' &&
+        widget.session.tool == RepairTool.hand &&
+        !widget.session.isOpen &&
+        widget.onInspect != null) {
+      _pointers.remove(e.pointer);
+      cancelInteraction();
+      widget.onInspect!();
+      return;
+    }
     if (_pointers.length == 1 && !_committed && target != null) {
-      if (_drag != null && _dragPosition != null) {
+      if (widget.session.heatingStep && !_moved && _hold.value > 0) {
+        widget.onAction(
+          target,
+          RepairGesture.hold,
+          heldMs: (_hold.value * RepairSession.heatDurationMs).round(),
+        );
+      } else if (_drag != null && _dragPosition != null) {
         widget.onAction(
           target,
           RepairGesture.drag,
@@ -998,7 +1103,10 @@ class WorkbenchViewState extends State<WorkbenchView>
         _pan = Offset.zero;
         _zoom = 1;
       }
-      _geometry = WorkbenchGeometry(size.width / size.height > 1.16);
+      _geometry = WorkbenchGeometry(
+        size.width / size.height > 1.16,
+        device: widget.session.device,
+      );
       return Semantics(
         label:
             '${rt('r_workbench')}. ${widget.session.current == null ? '' : rt(widget.session.current!.hintKey)}',

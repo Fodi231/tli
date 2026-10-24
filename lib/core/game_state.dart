@@ -24,6 +24,7 @@ class GameState extends ChangeNotifier {
   final Random _rng = Random();
   SharedPreferences? _prefs;
   Timer? _timer;
+  Timer? _deviceTimer;
   int _idSeq = 0;
   bool ready = false;
 
@@ -145,6 +146,10 @@ class GameState extends ChangeNotifier {
       AppLog.I.warn('net', 'проверка сети недоступна: $e');
     }
     _timer = Timer.periodic(const Duration(seconds: 20), (_) => _tick());
+    _deviceTimer = Timer.periodic(
+      const Duration(milliseconds: 250),
+      (_) => advanceRepairClocks(),
+    );
     ready = true;
     notifyListeners();
   }
@@ -153,6 +158,7 @@ class GameState extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _timer?.cancel();
+    _deviceTimer?.cancel();
     _connSub?.cancel();
     super.dispose();
   }
@@ -727,6 +733,47 @@ class GameState extends ChangeNotifier {
     final session = repairs[id];
     if (session == null) return;
     session.tool = tool;
+    _changed();
+  }
+
+  void advanceRepairClocks({DateTime? now}) {
+    final changed = <String>[];
+    for (final entry in repairs.entries) {
+      final s = entry.value;
+      final r = s.runtime;
+      if (!r.inBackground) continue;
+      final before = r.power;
+      final spec = deviceFor(s.device)!;
+      r.resume(
+        apple: spec.apple,
+        bootMs: spec.bootMs,
+        batteryConnected:
+            !s.batteryDisconnected &&
+            !(s.service == 'battery' && s.partRemoved),
+        now: now,
+      );
+      r.enterBackground(now: now);
+      if (before != r.power) changed.add(entry.key);
+    }
+    for (final id in changed) {
+      saveRepairDevice(id);
+    }
+  }
+
+  void saveRepairDevice(String id) {
+    final session = repairs[id];
+    if (session == null) return;
+    if (session.current?.id == 'power_off' &&
+        session.runtime.power.name == 'off') {
+      session.tool = RepairTool.hand;
+      repairAction(
+        id,
+        'power',
+        RepairGesture.hold,
+        heldMs: RepairSession.holdDurationMs,
+      );
+      return;
+    }
     _changed();
   }
 

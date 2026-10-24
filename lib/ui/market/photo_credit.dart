@@ -22,7 +22,7 @@ Future<void> showPhotoCredit(BuildContext context, String deviceId) async {
           ),
           content: SingleChildScrollView(
             child: SelectableText(
-              '${source['title']}\n\n© ${source['author']}\n${source['license']}\n${source['licenseUrl']}\n\n${source['source']}\n\n${source['changes']}\n\n${mt("Изменения: уменьшение и конвертация в JPEG. Лицензия исходного изображения сохранена. Фото иллюстрирует модель, а не состояние игрового лота.", "Changes: resized and converted to JPEG. Original image license retained. The image illustrates the model, not the condition of the game listing.", "Зміни: зменшення та конвертація в JPEG. Ліцензію зображення збережено. Фото ілюструє модель, а не стан ігрового лота.")}\n${deviceId == 'pixel7' ? mt("Pixel 7: иллюстрация модели.", "Pixel 7: model illustration.", "Pixel 7: ілюстрація моделі.") : ""}',
+              '${source['title']}\n\n© ${source['author']}\n${source['license']}\n${source['licenseUrl']}\n\n${source['source']}\n\n${source['changes']}\n\n${mt("Фото иллюстрирует модель, а не состояние игрового лота.", "The image illustrates the model, not the condition of the game listing.", "Фото ілюструє модель, а не стан ігрового лота.")}\n${deviceId == 'pixel7' ? mt("Pixel 7: иллюстрация модели.", "Pixel 7: model illustration.", "Pixel 7: ілюстрація моделі.") : ""}',
             ),
           ),
           actions: [

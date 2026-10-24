@@ -12,6 +12,11 @@ const products = <Product>[
   Product('p1', 'port', 'iPad Air', 25, 4.5),
   Product('p2', 'port', 'iPhone 12', 18, 4.4),
   Product('p3', 'port', 'Pixel 7', 22, 4.3),
+  Product('fd1', 'display', 'iPhone Duo', 620, 4.7),
+  Product('fd2', 'display', 'Galaxy Z Fold7', 540, 4.6),
+  Product('fd3', 'display', 'HUAWEI Mate XT', 850, 4.5),
+  Product('fb1', 'battery', 'Galaxy Z Fold7', 85, 4.7),
+  Product('fp1', 'port', 'HUAWEI Mate XT', 65, 4.6),
 ];
 
 const categories = ['display', 'battery', 'camera', 'port'];
@@ -31,6 +36,9 @@ const devices = [
   'Galaxy S22',
   'Galaxy S23',
   'Pixel 7',
+  'iPhone Duo',
+  'Galaxy Z Fold7',
+  'HUAWEI Mate XT',
   'iPad Air',
   'PlayBox 5',
 ];
@@ -45,7 +53,16 @@ const dealDevices = [
   DealDevice('PlayBox 5', 430),
 ];
 
-const counterpartNames = ['Alex', 'Maria', 'Kenji', 'Olena', 'Marco', 'Sam', 'Yuki', 'Dmytro'];
+const counterpartNames = [
+  'Alex',
+  'Maria',
+  'Kenji',
+  'Olena',
+  'Marco',
+  'Sam',
+  'Yuki',
+  'Dmytro',
+];
 
 const courses = <Course>[
   Course('basics', 'c_basics', null),
@@ -57,7 +74,13 @@ const courses = <Course>[
 // Real-world coordinates are used for the OpenStreetMap layer.
 const cities = <City>[
   City('tokyo', ['Токио', 'Tokyo', 'Токіо'], 35.6762, 139.6503, '22°C'),
-  City('la', ['Лос-Анджелес', 'Los Angeles', 'Лос-Анджелес'], 34.0522, -118.2437, '28°C'),
+  City(
+    'la',
+    ['Лос-Анджелес', 'Los Angeles', 'Лос-Анджелес'],
+    34.0522,
+    -118.2437,
+    '28°C',
+  ),
   City('milan', ['Милан', 'Milan', 'Мілан'], 45.4642, 9.1900, '18°C'),
 ];
 

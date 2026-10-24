@@ -114,7 +114,7 @@ class _FiltersState extends State<_Filters> {
                   labelText: mt('Марка', 'Brand', 'Бренд'),
                 ),
                 items:
-                    ['all', 'Apple', 'Samsung', 'Google']
+                    ['all', 'Apple', 'Samsung', 'Google', 'HUAWEI']
                         .map(
                           (b) => DropdownMenuItem(
                             value: b,

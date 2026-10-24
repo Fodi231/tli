@@ -8,6 +8,16 @@ String rt(String key) {
 }
 
 const _strings = <String, List<String>>{
+  'r_too_cold': [
+    'Недостаточный прогрев. Удерживайте фен до 65–85 °C и отпустите.',
+    'Too cold. Hold the heat gun to 65–85 °C, then release.',
+    'Недостатній прогрів. Утримуйте фен до 65–85 °C та відпустіть.',
+  ],
+  'r_overheated': [
+    'Перегрев: выше 105 °C. Дайте детали остыть и повторите прогрев короче.',
+    'Overheated: above 105 °C. Let the part cool and use a shorter heating pass.',
+    'Перегрів: понад 105 °C. Дайте деталі охолонути та скоротіть прогрів.',
+  ],
   'r_workbench': ['Мастерская', 'Workbench', 'Майстерня'],
   'r_live': ['РЕМОНТ · 2D', 'REPAIR · 2D', 'РЕМОНТ · 2D'],
   'r_training': ['Учебный стол', 'Practice bench', 'Навчальний стіл'],
@@ -36,9 +46,9 @@ const _strings = <String, List<String>>{
   'r_exit': ['К заказам', 'Orders', 'До замовлень'],
   'r_help': ['Как играть', 'How to play', 'Як грати'],
   'r_help_body': [
-    'Выберите инструмент, затем работайте с деталью. Винт: 3 нажатия. Перетаскивание: удерживайте деталь и ведите в выделенную зону. Прогрев и тест: удерживайте 1,2 секунды. Приближение: щипок или +/−. На ПК: 1–8 — инструменты, H — подсказки, Esc — выйти. Деталь списывается со склада при установке. Учебный стол бесплатный. Это игровая схема, не инструкция по ремонту реального устройства.',
-    'Select a tool, then interact with a component. Screw: 3 taps. Drag: move the component to the highlighted zone. Heat and test: hold for 1.2 seconds. Zoom: pinch or +/−. Desktop: 1–8 select tools, H toggles hints, Esc exits. A spare part is consumed when installed. Practice is free. This is a game schematic, not a real device repair guide.',
-    'Обери інструмент і працюй із деталлю. Гвинт: 3 натискання. Перетягування: веди деталь у виділену зону. Прогрів і тест: утримуй 1,2 секунди. Наближення: щипок або +/−. На ПК: 1–8 — інструменти, H — підказки, Esc — вихід. Запчастина списується під час встановлення. Навчальний стіл безкоштовний. Це ігрова схема, а не інструкція ремонту справжнього пристрою.',
+    'Выберите инструмент, затем работайте с деталью. Винт: 3 нажатия. Перетаскивание: удерживайте деталь и ведите в выделенную зону. Прогрев: удерживайте до 65–85 °C и отпустите. Тест: удерживайте 1,2 секунды. Приближение: щипок или +/−. На ПК: 1–0 — инструменты, H — подсказки, Esc — выйти. Деталь списывается со склада при установке. Учебный стол бесплатный. Это игровая схема, не инструкция по ремонту реального устройства.',
+    'Select a tool, then interact with a component. Screw: 3 taps. Drag: move the component to the highlighted zone. Heat: hold to 65–85 °C and release. Test: hold for 1.2 seconds. Zoom: pinch or +/−. Desktop: 1–0 select tools, H toggles hints, Esc exits. A spare part is consumed when installed. Practice is free. This is a game schematic, not a real device repair guide.',
+    'Обери інструмент і працюй із деталлю. Гвинт: 3 натискання. Перетягування: веди деталь у виділену зону. Прогрів: утримуй до 65–85 °C та відпусти. Тест: утримуй 1,2 секунди. Наближення: щипок або +/−. На ПК: 1–0 — інструменти, H — підказки, Esc — вихід. Запчастина списується під час встановлення. Навчальний стіл безкоштовний. Це ігрова схема, а не інструкція ремонту справжнього пристрою.',
   ],
   'r_new': ['НОВАЯ ДЕТАЛЬ', 'NEW PART', 'НОВА ДЕТАЛЬ'],
   'r_old': ['СНЯТАЯ ДЕТАЛЬ', 'REMOVED PART', 'ЗНЯТА ДЕТАЛЬ'],
@@ -48,9 +58,9 @@ const _strings = <String, List<String>>{
   'r_installed': ['Установлено', 'Installed', 'Встановлено'],
   'r_in_stock': ['На складе', 'In stock', 'На складі'],
   'r_parts_note': [
-    'Запчасти учитываются по категории, как в текущем магазине.',
-    'Parts use the existing category-based inventory.',
-    'Запчастини обліковуються за категорією, як у поточному магазині.',
+    'Снятые детали — в левый лоток, винты — отдельно. Новое уплотнение ставится перед закрытием.',
+    'Put removed parts in the left tray and keep screws separate. Fit fresh adhesive before closing.',
+    'Зняті деталі — у лівий лоток, гвинти — окремо. Новий ущільнювач встановлюється перед закриттям.',
   ],
   'r_quality': ['Качество', 'Quality', 'Якість'],
   'r_no_reward': [
@@ -128,9 +138,9 @@ const _strings = <String, List<String>>{
     'Вимкнути пристрій',
   ],
   'r_hint_power_off': [
-    'Рука · удерживайте боковую кнопку.',
-    'Hand · hold the side button.',
-    'Рука · утримуй бічну кнопку.',
+    'Откройте «Осмотр и ОС». Удерживайте питание в шторке и выключите телефон.',
+    'Open device inspection. Hold power in quick settings, then shut down.',
+    'Відкрий «Огляд та ОС». Утримуй живлення у шторці та вимкни телефон.',
   ],
   'r_step_frame_out': [
     'Открутить нижние винты',
@@ -148,9 +158,9 @@ const _strings = <String, List<String>>{
     'Розм’якшити клей дисплея',
   ],
   'r_hint_heat': [
-    'Прогрев · удерживайте на экране.',
-    'Heat · hold on the screen.',
-    'Прогрів · утримуй на екрані.',
+    'Удерживайте фен до 65–85 °C и отпустите. Выше 105 °C — перегрев.',
+    'Hold the heat gun to 65–85 °C and release. Above 105 °C overheats.',
+    'Утримуйте фен до 65–85 °C та відпустіть. Понад 105 °C — перегрів.',
   ],
   'r_step_flip_front': [
     'Перевернуть корпус экраном вверх',
@@ -168,9 +178,9 @@ const _strings = <String, List<String>>{
     'Послабити клей дисплея',
   ],
   'r_hint_display_heat': [
-    'Удерживай нагреватель на переднем дисплее.',
-    'Hold the heater over the front display.',
-    'Утримуй нагрівач на передньому дисплеї.',
+    'Нагрейте передний дисплей до 65–85 °C и отпустите фен.',
+    'Heat the front display to 65–85 °C and release.',
+    'Нагрійте передній дисплей до 65–85 °C та відпустіть фен.',
   ],
   'r_step_flip_back': [
     'Перевернуть корпус обратно',
@@ -401,9 +411,53 @@ const _strings = <String, List<String>>{
     'Фінальна перевірка',
   ],
   'r_hint_test': [
-    'Тестер · удерживайте на каждой из 3 тестовых зон.',
-    'Tester · hold on each of the 3 test zones.',
-    'Тестер · утримуй на кожній із 3 тестових зон.',
+    'Включите телефон в «Осмотр и ОС». После загрузки: тестер · удержание на трёх зонах.',
+    'Power on in device inspection. After boot: tester · hold each of the three zones.',
+    'Увімкни телефон в «Огляд та ОС». Після завантаження: тестер · утримання на трьох зонах.',
+  ],
+  'r_use_shutdown': [
+    'Сначала выключите телефон в «Осмотр и ОС»',
+    'Shut down in device inspection first',
+    'Спочатку вимкни телефон в «Огляд та ОС»',
+  ],
+  'r_use_boot': [
+    'Сначала включите телефон и дождитесь загрузки',
+    'Power on and wait for boot first',
+    'Спочатку увімкни телефон і дочекайся завантаження',
+  ],
+  'r_tool_pick': ['Медиатор', 'Opening pick', 'Медіатор'],
+  'r_tool_adhesive': ['Уплотнитель', 'Adhesive', 'Ущільнювач'],
+  'r_step_unfold': ['Раскрыть корпус', 'Unfold the device', 'Розкрити корпус'],
+  'r_hint_unfold': [
+    'Рука · нажмите на корпус, чтобы разложить секции перед ремонтом.',
+    'Hand · tap the chassis to unfold its sections before repair.',
+    'Рука · натисни на корпус, щоб розкласти секції перед ремонтом.',
+  ],
+  'r_step_lift_edge': ['Приподнять край', 'Lift the edge', 'Припідняти край'],
+  'r_hint_lift_edge': [
+    'Присоска · удерживайте на крышке, чтобы создать небольшой зазор.',
+    'Suction handle · hold on the cover to create a small gap.',
+    'Присоска · утримуй на кришці, щоб створити невеликий зазор.',
+  ],
+  'r_step_adhesive_cut': [
+    'Отделить клей по кромкам',
+    'Separate the edge adhesive',
+    'Відокремити клей уздовж країв',
+  ],
+  'r_hint_adhesive_cut': [
+    'Медиатор · удерживайте на каждой из четырёх подсвеченных кромок.',
+    'Opening pick · hold each of the four highlighted edges.',
+    'Медіатор · утримуй на кожному з чотирьох підсвічених країв.',
+  ],
+  'r_step_gasket': [
+    'Установить новое уплотнение',
+    'Install fresh adhesive',
+    'Встановити новий ущільнювач',
+  ],
+  'r_hint_gasket': [
+    'Уплотнитель · удерживайте на рамке до установки крышки.',
+    'Adhesive · hold on the frame before closing the cover.',
+    'Ущільнювач · утримуй на рамці до встановлення кришки.',
   ],
   'r_test_screen': ['Экран', 'Display', 'Екран'],
   'r_test_camera': ['Камера', 'Camera', 'Камера'],

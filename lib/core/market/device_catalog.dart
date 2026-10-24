@@ -14,7 +14,37 @@ class DeviceSpec {
     this.source,
   );
   String get photo => 'assets/market/$id.jpg';
-  String get facts => '$screen · $chip · $storage · $batteryMah mAh';
+  String get facts =>
+      '$screen · $chip · $storage${batteryMah > 0 ? ' · $batteryMah mAh' : ''}';
+  int get panels =>
+      id == 'matext'
+          ? 3
+          : (id == 'galaxyfold7' || id == 'iphoneduo')
+          ? 2
+          : 1;
+  bool get apple => brand == 'Apple';
+  String get system =>
+      apple
+          ? 'iOS'
+          : brand == 'Samsung'
+          ? 'One UI'
+          : brand == 'HUAWEI'
+          ? 'HarmonyOS'
+          : 'Android';
+  double get closedAspect =>
+      id == 'iphoneduo'
+          ? 84.1 / 117.8
+          : id == 'galaxyfold7'
+          ? 72.8 / 158.4
+          : id == 'matext'
+          ? 73.5 / 156.7
+          : .5114;
+  int get bootMs =>
+      apple
+          ? 12000
+          : brand == 'HUAWEI'
+          ? 14000
+          : 11000;
 }
 
 const deviceCatalog = <DeviceSpec>[
@@ -94,6 +124,39 @@ const deviceCatalog = <DeviceSpec>[
     300,
     4355,
     'https://www.ifixit.com/Device/Google_Pixel_7',
+  ),
+  DeviceSpec(
+    'iphoneduo',
+    'iPhone Duo',
+    'Apple',
+    'A20 Pro',
+    '5.4″ / 7.6″ OLED · 120 Hz',
+    '256 GB',
+    1700,
+    0,
+    'https://www.apple.com/iphone-duo/specs/',
+  ),
+  DeviceSpec(
+    'galaxyfold7',
+    'Galaxy Z Fold7',
+    'Samsung',
+    'Snapdragon 8 Elite for Galaxy',
+    '6.5″ / 8.0″ AMOLED · 120 Hz',
+    '256 GB',
+    1450,
+    4400,
+    'https://www.samsung.com/uk/smartphones/galaxy-z-fold7/specs/',
+  ),
+  DeviceSpec(
+    'matext',
+    'HUAWEI Mate XT',
+    'HUAWEI',
+    'Kirin',
+    '6.4″ / 7.9″ / 10.2″ OLED',
+    '512 GB',
+    2100,
+    5600,
+    'https://consumer.huawei.com/en/phones/mate-xt-ultimate-design/specs/',
   ),
 ];
 DeviceSpec? deviceFor(String value) {

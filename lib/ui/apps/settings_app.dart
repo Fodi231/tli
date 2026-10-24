@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
@@ -1242,6 +1243,52 @@ class _SettingsAppState extends State<SettingsApp> {
               const Text(
                 'v$kAppVersion',
                 style: TextStyle(color: C.sub, fontSize: 12),
+              ),
+              const SizedBox(height: 14),
+              TextButton.icon(
+                onPressed:
+                    () => showDialog<void>(
+                      context: context,
+                      builder:
+                          (c) => AlertDialog(
+                            title: Text(
+                              mt(
+                                'Источники изображений',
+                                'Image credits',
+                                'Джерела зображень',
+                              ),
+                            ),
+                            content: SizedBox(
+                              width: 600,
+                              child: SingleChildScrollView(
+                                child: FutureBuilder<String>(
+                                  future: rootBundle.loadString(
+                                    'assets/repair/SOURCES.txt',
+                                  ),
+                                  builder:
+                                      (_, s) => SelectableText(
+                                        s.data ?? '…',
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                ),
+                              ),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(c),
+                                child: const Text('OK'),
+                              ),
+                            ],
+                          ),
+                    ),
+                icon: const Icon(Icons.photo_library_outlined, size: 18),
+                label: Text(
+                  mt(
+                    'Источники изображений',
+                    'Image credits',
+                    'Джерела зображень',
+                  ),
+                ),
               ),
             ],
           ),

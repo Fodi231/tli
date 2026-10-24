@@ -7,6 +7,7 @@ import '../../core/repair/repair_strings.dart';
 import 'workbench_geometry.dart';
 import 'model_artwork.dart';
 import '../../core/repair/device_profile.dart';
+import 'photo_anatomy.dart';
 
 const benchBlue = Color(0xFF57C5FF);
 const benchGreen = Color(0xFF65E6AE);
@@ -20,6 +21,7 @@ class WorkbenchPainter extends CustomPainter {
   final Offset pan;
   final String? dragTarget, holdingTarget;
   final Offset? dragPosition;
+  final PhotoAnatomy? photo;
   WorkbenchPainter({
     required this.geometry,
     required this.session,
@@ -31,6 +33,7 @@ class WorkbenchPainter extends CustomPainter {
     this.holdingTarget,
     this.dragTarget,
     this.dragPosition,
+    this.photo,
   });
 
   DeviceProfile get profile => profileFor(session.device);
@@ -52,6 +55,41 @@ class WorkbenchPainter extends CustomPainter {
     canvas.translate(-geometry.size.width / 2, -geometry.size.height / 2);
     final g = geometry;
     final s = session;
+    final mat = Rect.fromLTWH(14, 66, g.size.width - 28, g.size.height - 84);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        mat.shift(const Offset(0, 10)),
+        const Radius.circular(23),
+      ),
+      Paint()..color = Colors.black54,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(mat, const Radius.circular(23)),
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF24556D), Color(0xFF173B50), Color(0xFF102C3D)],
+        ).createShader(mat),
+    );
+    for (double x = 32; x < g.size.width - 45; x += 42) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(x, 75, 34, 19),
+          const Radius.circular(4),
+        ),
+        Paint()..color = const Color(0xFF16384B),
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(x, 75, 34, 19),
+          const Radius.circular(4),
+        ),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..color = Colors.white.withValues(alpha: .10),
+      );
+    }
     // Thin technical grid makes the physical work area readable over the photo.
     final grid =
         Paint()
@@ -108,11 +146,14 @@ class WorkbenchPainter extends CustomPainter {
             !s.done('part_on'))) {
       _flex(canvas);
     }
-    if (!s.newPartInstalled &&
-        s.service != 'diag' &&
-        dragTarget != 'new_part') {
-      _component(canvas, s.service, g.newTray.deflate(34), fresh: true);
-    } else if (s.service != 'diag') {
+    if (!s.done('part_in') && s.service != 'diag' && dragTarget != 'new_part') {
+      _component(
+        canvas,
+        s.service,
+        g.rect('new_part', s).deflate(6),
+        fresh: true,
+      );
+    } else if (s.service != 'diag' && s.newPartInstalled) {
       _text(
         canvas,
         '✓ ${rt('r_installed')}',
@@ -122,8 +163,43 @@ class WorkbenchPainter extends CustomPainter {
         centered: true,
       );
     }
-    if (s.done('part_out')) {
-      _component(canvas, s.service, g.oldTray.deflate(32), fresh: false);
+    if (s.service == 'battery') {
+      for (var i = 0; i < profile.auxiliaryBatteries.length; i++) {
+        final id = 'new_aux_$i';
+        if (!s.auxiliaryInstalled(i) && dragTarget != id) {
+          final rect = g.rect(id, s).deflate(4);
+          if (photo != null) {
+            photo!.part(canvas, profile, 'aux_battery_$i', rect);
+          } else {
+            art.part(canvas, 'battery', rect, fresh: true);
+          }
+        }
+      }
+    }
+    if (s.done('part_out') || s.current?.id == 'part_out') {
+      if (s.service != 'battery' || profile.auxiliaryBatteries.isEmpty) {
+        if (s.done('part_out')) {
+          _component(canvas, s.service, g.oldTray.deflate(32), fresh: false);
+        }
+      } else {
+        final count = profile.auxiliaryBatteries.length + 1;
+        final tray = g.oldTray.deflate(22);
+        for (var i = 0; i < count; i++) {
+          final id = i == 0 ? 'battery' : 'aux_battery_${i - 1}';
+          if (!s.done('part_out') && !s.targetDone(id)) continue;
+          final rect = Rect.fromLTWH(
+            tray.left + i * tray.width / count,
+            tray.top + 12,
+            tray.width / count - 5,
+            tray.height - 20,
+          );
+          if (photo != null) {
+            photo!.part(canvas, profile, id, rect);
+          } else {
+            art.part(canvas, 'battery', rect);
+          }
+        }
+      }
     }
     if (s.shieldRemoved && dragTarget != 'stored_shield') {
       _shield(canvas, g.rect('stored_shield', s).deflate(6));
@@ -174,6 +250,19 @@ class WorkbenchPainter extends CustomPainter {
           RRect.fromRectAndRadius(r, const Radius.circular(6)),
           Paint()..color = Colors.white70,
         );
+      } else if (dragTarget!.startsWith('new_aux_')) {
+        final id = 'aux_battery_${dragTarget!.split('_').last}';
+        if (photo != null) {
+          photo!.part(canvas, profile, id, r);
+        } else {
+          art.part(canvas, 'battery', r, fresh: true);
+        }
+      } else if (dragTarget!.startsWith('aux_battery_')) {
+        if (photo != null) {
+          photo!.part(canvas, profile, dragTarget!, r);
+        } else {
+          art.part(canvas, 'battery', r, fresh: s.newPartInstalled);
+        }
       } else {
         _component(canvas, s.service, r, fresh: dragTarget == 'new_part');
       }
@@ -187,14 +276,23 @@ class WorkbenchPainter extends CustomPainter {
         2 * math.pi * hold,
         false,
         Paint()
-          ..color = benchGreen
+          ..color =
+              s.heatingStep
+                  ? (22 + hold * 96 > 105
+                      ? Colors.redAccent
+                      : 22 + hold * 96 >= 65
+                      ? benchGreen
+                      : Colors.orangeAccent)
+                  : benchGreen
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round
           ..strokeWidth = 5,
       );
       _text(
         canvas,
-        '${(hold * 100).round()}%',
+        s.heatingStep
+            ? '${(22 + hold * 96).round()} °C'
+            : '${(hold * 100).round()}%',
         c,
         13,
         Colors.white,
@@ -297,15 +395,24 @@ class WorkbenchPainter extends CustomPainter {
         );
       }
     } else {
-      art.underlay(c, p);
+      if (photo != null) {
+        photo!.body(c, p, profile);
+      } else {
+        art.underlay(c, p);
+      }
       for (final part in ['battery', 'camera', 'port']) {
-        if (!(s.service == part && s.partRemoved) && dragTarget != part) {
-          _component(
-            c,
-            part,
-            g.rect(part, s),
-            fresh: s.service == part && s.newPartInstalled,
-          );
+        if (!(s.service == part &&
+                (s.partRemoved ||
+                    s.current?.id == 'part_out' && s.targetDone(part))) &&
+            dragTarget != part) {
+          if (photo == null || photo!.spec.separateParts) {
+            _component(
+              c,
+              part,
+              g.rect(part, s),
+              fresh: s.service == part && s.newPartInstalled,
+            );
+          }
         } else {
           c.drawRRect(
             RRect.fromRectAndRadius(g.rect(part, s), const Radius.circular(7)),
@@ -313,36 +420,89 @@ class WorkbenchPainter extends CustomPainter {
           );
         }
       }
-      art.cables(c, p, s);
+      for (var i = 0; i < profile.auxiliaryBatteries.length; i++) {
+        final id = 'aux_battery_$i';
+        final removed =
+            s.service == 'battery' &&
+            (s.done('part_out') && !s.auxiliaryInstalled(i) ||
+                s.current?.id == 'part_out' && s.targetDone(id));
+        final r = g.rect(id, s);
+        if (removed || dragTarget == id) {
+          c.drawRRect(
+            RRect.fromRectAndRadius(r, const Radius.circular(6)),
+            Paint()..color = const Color(0xFF242A30),
+          );
+        } else if (photo == null || photo!.spec.separateParts) {
+          if (photo != null) {
+            photo!.part(c, profile, id, r);
+          } else {
+            art.part(c, 'battery', r, fresh: s.newPartInstalled);
+          }
+        }
+      }
+      if (photo == null) art.cables(c, p, s);
       for (final id in [
         'battery_connector',
         'part_connector',
         if (profile.rearAccess) 'interconnect_1',
+        for (var i = 0; i < profile.auxiliaryBatteries.length; i++)
+          'aux_battery_connector_$i',
       ]) {
         final disconnected =
-            id == 'battery_connector'
-                ? s.batteryDisconnected
+            (id == 'battery_connector' ||
+                    id.startsWith('aux_battery_connector'))
+                ? s.connectorDisconnected(id)
                 : s.done('part_off') && !s.done('part_on');
         final r = g.rect(id, s);
+        final end =
+            r.center + Offset(disconnected ? -10 : 0, disconnected ? -9 : 0);
+        final start = r.center + const Offset(22, 24);
+        final ribbon =
+            Path()
+              ..moveTo(start.dx, start.dy)
+              ..cubicTo(
+                start.dx - 22,
+                start.dy,
+                end.dx + 18,
+                end.dy + 14,
+                end.dx,
+                end.dy,
+              );
+        c.drawPath(
+          ribbon,
+          Paint()
+            ..color = const Color(0xFF111318)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 10,
+        );
+        c.drawPath(
+          ribbon,
+          Paint()
+            ..color = const Color(0xFF5B513A)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2,
+        );
+        c.drawRRect(
+          RRect.fromRectAndRadius(r.deflate(2), const Radius.circular(2)),
+          Paint()..color = const Color(0xFF8B9296),
+        );
         c.drawRRect(
           RRect.fromRectAndRadius(
-            r.shift(Offset(disconnected ? -9 : 0, 0)),
-            const Radius.circular(3),
+            Rect.fromCenter(center: end, width: 23, height: 10),
+            const Radius.circular(2),
           ),
-          Paint()
-            ..color =
-                disconnected
-                    ? const Color(0xFFCA7F3E)
-                    : const Color(0xFFDCB873),
+          Paint()..color = const Color(0xFF22252A),
         );
-        for (var i = 0; i < 5; i++) {
-          c.drawLine(
-            r.topLeft + Offset(4 + i * 5, 4),
-            r.topLeft + Offset(4 + i * 5, 15),
-            Paint()
-              ..color = Colors.black38
-              ..strokeWidth = 1,
-          );
+        if (disconnected) {
+          for (var pin = 0; pin < 7; pin++) {
+            c.drawLine(
+              end + Offset(-8 + pin * 2.6, 2),
+              end + Offset(-8 + pin * 2.6, 5),
+              Paint()
+                ..color = const Color(0xFFE3C886)
+                ..strokeWidth = 1,
+            );
+          }
         }
       }
       if (!s.shieldRemoved && dragTarget != 'shield') {
@@ -544,6 +704,10 @@ class WorkbenchPainter extends CustomPainter {
     required bool fresh,
     bool cover = false,
   }) {
+    if (!cover && photo?.display != null) {
+      photo!.display!.body(c, r, profile);
+      return;
+    }
     if (cover) {
       art.rearCover(c, r, inside: true);
       return;
@@ -612,7 +776,11 @@ class WorkbenchPainter extends CustomPainter {
         width: w,
         height: w * b.h / b.w,
       );
-      art.part(c, type, fitted, fresh: fresh);
+      if (photo != null) {
+        photo!.part(c, profile, type, fitted);
+      } else {
+        art.part(c, type, fitted, fresh: fresh);
+      }
       return;
     }
     switch (type) {
@@ -638,6 +806,10 @@ class WorkbenchPainter extends CustomPainter {
   }
 
   void _shield(Canvas c, Rect r) {
+    if (photo?.spec.sprites.containsKey('shield') == true) {
+      photo!.part(c, profile, 'shield', r);
+      return;
+    }
     final b = profile.shield;
     final w = math.min(r.width, r.height * b.w / b.h);
     art.shield(
@@ -682,9 +854,9 @@ class WorkbenchPainter extends CustomPainter {
           ..moveTo(start.dx, start.dy)
           ..cubicTo(
             start.dx + 85,
-            start.dy + 95,
+            start.dy + 45,
             end.dx - 50,
-            end.dy + 75,
+            end.dy + 30,
             end.dx,
             end.dy,
           );
@@ -693,21 +865,21 @@ class WorkbenchPainter extends CustomPainter {
       Paint()
         ..color = const Color(0xFF171C22)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 20,
+        ..strokeWidth = 12,
     );
     c.drawPath(
       path,
       Paint()
-        ..color = const Color(0xFFB9783E)
+        ..color = const Color(0xFF38342F)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 13,
+        ..strokeWidth = 8,
     );
     c.drawPath(
       path,
       Paint()
-        ..color = const Color(0xFFDEAE6F)
+        ..color = const Color(0xFFA58251)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5,
+        ..strokeWidth = .7,
     );
   }
 

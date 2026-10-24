@@ -1,6 +1,18 @@
-# Assets for TechLife 0.7.0
+# Assets for TechLife 0.9.0
 
-## Current artwork and UI, 0.7.0
+## Current repair artwork, 0.9.0
+
+The repair bench now embeds real, model-specific photographs. The old statement below that iFixit material is excluded describes version 0.7 only and does not apply to 0.9. Complete current credits, authors, guide URLs, licenses and modifications are in `assets/repair/SOURCES.txt`, bundled in the game and accessible from Settings → About → Image sources.
+
+The original JPEG bytes are retained. Flutter draws perspective-corrected crops as body, battery, display-back and component textures, with separate interactive overlays. Seven classic models use iFixit guide photos; the new foldables use the cited iFixit splay, TechInsights image and Kingmi Mobile thumbnail. The Duo thumbnail is not a verified engineering drawing. Physical geometry, fasteners and cables remain simplified; guide callouts remain visible in some source images.
+
+The eight tool photos and seven battery product-kit images are sourced from iFixit. The hand, multimeter, simulated OS screens, folding motion and control widgets are code-drawn game elements. New market images are the official Apple, Samsung and HUAWEI images linked in SOURCES.txt. The existing main launcher icon and four wallpapers are unchanged.
+
+iFixit guide material and visual adaptations are CC BY-NC-SA 3.0. Commercial use requires the appropriate permission or replacement assets. Commercial redistribution rights for the other new photos have not been established. These notices must accompany redistributed material; this project is not endorsed by iFixit or the manufacturers.
+
+`preview/09_*.png` and `preview/09_fold.gif` are exported from actual Flutter widgets. They are not concept renders. The OS is a local gameplay simulation, not manufacturer firmware.
+
+## Historical artwork and UI, 0.7.0
 
 The five marketplace screenshots supplied by the user are visual references for an interactive Flutter implementation. They are not used as full-screen backgrounds or click maps. All controls, text, prices, filters, forms, conversations and counters are native widgets backed by game state.
 
@@ -43,7 +55,7 @@ Per-file metadata, the source page, author, license URL and modifications are in
 
 Changes: all images were resized, oriented and JPEG-encoded. The Galaxy S23 group photo was cropped to the regular S23 on the right; the iPhone 15 Pro photo was cropped around the device. The Pixel SVG was obtained through its Wikimedia raster rendering. Detailed modification statements are in the JSON credits.
 
-## Original internal components
+## Original internal components — historical 0.7.0
 
 `lib/core/repair/device_profile.dart` defines separate service-side component coordinates for all seven models. `lib/ui/repair/model_artwork.dart` renders original vector art: battery pouches, camera lenses, logic boards, charging daughterboards, metal shields, wireless charging assemblies, connectors and flex cables. No iFixit photograph, diagram, page text or logo is shipped. Geometry and broad physical facts were researched from the following teardown guides; iFixit's CC BY-NC-SA material is excluded because this project is intended for commercial distribution.
 

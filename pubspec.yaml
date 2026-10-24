@@ -1,7 +1,7 @@
 name: techlife
 description: TechLife - simulator of device repair, trading and resale.
 publish_to: none
-version: 0.8.0+9
+version: 0.10.0+11
 
 environment:
   sdk: ">=3.7.0 <4.0.0"
@@ -36,6 +36,9 @@ flutter:
           weight: 700
   assets:
     - assets/repair/workshop.jpg
+    - assets/repair/SOURCES.txt
+    - assets/repair/anatomy/
+    - assets/repair/tools/
     - assets/market/
     - assets/icon/icon.png
     - assets/icon/techmarket.png

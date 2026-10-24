@@ -160,6 +160,11 @@ class Deal {
   int readMessageCount = 0;
   bool busy = false;
   double price = 0;
+  double? counterPrice;
+  double get suggestedCounterPrice =>
+      kind == 'buy'
+          ? ((limit + (ask - limit) * .35) / 5).round() * 5.0
+          : (limit / 5).round() * 5.0;
   final List<ChatMsg> messages = [];
   double get currentPrice => price > 0 ? price : ask;
   int get unreadMessages =>
@@ -197,6 +202,7 @@ class Deal {
     'rounds': rounds,
     'readCount': readMessageCount,
     'price': price,
+    'counter': counterPrice,
     'messages': messages.map((m) => m.toJson()).toList(),
   };
   factory Deal.fromJson(Map<String, dynamic> j) {
@@ -218,6 +224,13 @@ class Deal {
     d.rounds = j['rounds'] ?? 0;
     d.readMessageCount = (j['readCount'] as num?)?.toInt() ?? 0;
     d.price = (j['price'] as num? ?? 0).toDouble();
+    d.counterPrice = (j['counter'] as num?)?.toDouble();
+    if (!j.containsKey('counter') &&
+        d.status == 'open' &&
+        d.rounds > 0 &&
+        d.rounds < 6) {
+      d.counterPrice = d.suggestedCounterPrice;
+    }
     d.messages.addAll(
       (j['messages'] as List? ?? []).map(
         (m) => ChatMsg.fromJson(Map<String, dynamic>.from(m)),

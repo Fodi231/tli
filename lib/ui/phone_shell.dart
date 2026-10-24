@@ -113,7 +113,11 @@ class PhoneScreen extends StatelessWidget {
       // Apps are drawn dark; the light theme inverts them (the wallpaper,
       // lock screen and home screen are not affected).
       body = ThemeFilter(
-        light: light && sh.app != 'market' && sh.app != 'messages',
+        light:
+            light &&
+            sh.app != 'market' &&
+            sh.app != 'messages' &&
+            sh.app != 'notifications',
         child: AppHost(id: sh.app!, arg: sh.arg),
       );
       key = 'app_${sh.app}_${sh.arg}_$light';
@@ -129,7 +133,8 @@ class PhoneScreen extends StatelessWidget {
                 StatusBar(
                   light:
                       sh.unlocked &&
-                      (sh.app == 'market' || sh.app == 'messages'),
+                      (sh.app == 'market' ||
+                          (sh.app == 'messages' || sh.app == 'notifications')),
                 ),
                 Expanded(
                   child: AnimatedSwitcher(
@@ -155,7 +160,9 @@ class PhoneScreen extends StatelessWidget {
                   child: Container(
                     height: 19,
                     color:
-                        sh.app == 'market' || sh.app == 'messages'
+                        sh.app == 'market' ||
+                                (sh.app == 'messages' ||
+                                    sh.app == 'notifications')
                             ? Colors.white
                             : Colors.transparent,
                     alignment: Alignment.center,
@@ -164,7 +171,9 @@ class PhoneScreen extends StatelessWidget {
                       height: 4,
                       decoration: BoxDecoration(
                         color:
-                            sh.app == 'market' || sh.app == 'messages'
+                            sh.app == 'market' ||
+                                    (sh.app == 'messages' ||
+                                        sh.app == 'notifications')
                                 ? Colors.black87
                                 : Colors.white70,
                         borderRadius: BorderRadius.circular(4),
@@ -300,11 +309,15 @@ class Glass extends StatelessWidget {
   Widget build(BuildContext context) => ClipRRect(
     borderRadius: BorderRadius.circular(25),
     child: BackdropFilter(
+      enabled: context.watch<GameState>().liquidGlass,
       filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
       child: Container(
         padding: padding,
         decoration: BoxDecoration(
-          color: color,
+          color:
+              context.watch<GameState>().liquidGlass
+                  ? color
+                  : const Color(0xFF293A50),
           borderRadius: BorderRadius.circular(25),
           border: Border.all(
             color: Colors.white.withValues(alpha: .16),
@@ -898,7 +911,16 @@ class AppIcon extends StatelessWidget {
                     ],
                   ),
                 ),
-                child: Icon(app.icon, color: Colors.white, size: 28),
+                child:
+                    app.id == 'market'
+                        ? ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Image.asset(
+                            'assets/icon/techmarket.png',
+                            fit: BoxFit.cover,
+                          ),
+                        )
+                        : Icon(app.icon, color: Colors.white, size: 28),
               ),
               if (badge > 0)
                 Positioned(

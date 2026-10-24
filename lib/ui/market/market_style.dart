@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../core/game_state.dart';
 import '../../core/market/device_catalog.dart';
 import '../../core/market/market_strings.dart';
 import '../widgets.dart' show money;
+import '../liquid_surface.dart';
 
 const marketBlue = Color(0xFF008E95);
 const marketGray = Color(0xFFF0F3F5);
@@ -96,29 +99,8 @@ class MarketSurface extends StatelessWidget {
     this.shadow = false,
   });
   @override
-  Widget build(BuildContext context) => Container(
-    padding: padding,
-    decoration: BoxDecoration(
-      gradient: const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xEEFFFFFF), Color(0xBBF4FAFA)],
-      ),
-      borderRadius: BorderRadius.circular(radius),
-      border: Border.all(color: const Color(0xFFE5ECEE)),
-      boxShadow:
-          shadow
-              ? const [
-                BoxShadow(
-                  color: Color(0x0C336D73),
-                  blurRadius: 18,
-                  offset: Offset(0, 7),
-                ),
-              ]
-              : null,
-    ),
-    child: child,
-  );
+  Widget build(BuildContext context) =>
+      LiquidSurface(padding: padding, radius: radius, child: child);
 }
 
 class MarketPill extends StatelessWidget {
@@ -650,10 +632,14 @@ class MarketBottomBar extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(31),
               child: BackdropFilter(
+                enabled: context.watch<GameState>().liquidGlass,
                 filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xDDF3FAF9),
+                    color:
+                        context.watch<GameState>().liquidGlass
+                            ? const Color(0xDDF3FAF9)
+                            : const Color(0xFFF3FAF9),
                     borderRadius: BorderRadius.circular(31),
                     border: Border.all(color: Colors.white, width: 1.5),
                   ),

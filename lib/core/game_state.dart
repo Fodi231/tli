@@ -14,8 +14,10 @@ import 'i18n.dart';
 import 'models.dart';
 import 'market/device_catalog.dart';
 import 'market/market_models.dart';
+import 'market/chat_intent.dart';
 import 'repair/repair_session.dart';
 import 'wallpaper_cfg.dart';
+import 'wallpapers.dart';
 import 'window_service.dart';
 
 class GameState extends ChangeNotifier {
@@ -55,6 +57,7 @@ class GameState extends ChangeNotifier {
   // --- appearance / settings
   String playerName = '';
   int themeMode = 2; // 0 = system, 1 = light, 2 = dark
+  bool liquidGlass = true;
   final WallpaperCfg homeWp = WallpaperCfg();
   final WallpaperCfg lockWp = WallpaperCfg();
   bool lockSeparate = false;
@@ -295,6 +298,7 @@ class GameState extends ChangeNotifier {
             .toList();
     playerName = (j['pname'] as String?) ?? '';
     themeMode = ((j['theme'] as int?) ?? 2).clamp(0, 2).toInt();
+    liquidGlass = j['liquidGlass'] != false;
     homeWp.loadJson(
       j['wpHome'] == null
           ? null
@@ -369,6 +373,7 @@ class GameState extends ChangeNotifier {
     'txns': txns.take(40).map((e) => e.toJson()).toList(),
     'pname': playerName,
     'theme': themeMode,
+    'liquidGlass': liquidGlass,
     'wpHome': homeWp.toJson(),
     'wpLock': lockWp.toJson(),
     'lockSep': lockSeparate,
@@ -415,6 +420,7 @@ class GameState extends ChangeNotifier {
   Future<void> resetAll() async {
     await _prefs?.remove('save');
     balance = 1500;
+    liquidGlass = true;
     reputation = 4.0;
     cityIndex = 0;
     customCity = null;
@@ -466,13 +472,31 @@ class GameState extends ChangeNotifier {
     _changed();
   }
 
+  void setLiquidGlass(bool value) {
+    liquidGlass = value;
+    _changed();
+  }
+
   /// Called when the device switches between light and dark ("system" theme).
   void refreshTheme() => notifyListeners();
 
   WallpaperCfg _cfg(bool lock) => (lock && lockSeparate) ? lockWp : homeWp;
 
+  void setWallpaperAsset(String asset, {bool lock = false}) {
+    if (!bundledWallpapers.containsKey(asset)) return;
+    final c = _cfg(lock);
+    c.asset = asset;
+    c.bytes = null;
+    c.iw = c.ih = 0;
+    c.scale = 1;
+    c.ox = c.oy = 0;
+    _saveImage(c);
+    _changed();
+  }
+
   void setWallpaperPreset(int i, {bool lock = false}) {
     final c = _cfg(lock);
+    c.asset = null;
     c.preset = i;
     c.bytes = null;
     c.iw = 0;
@@ -494,6 +518,7 @@ class GameState extends ChangeNotifier {
     bool lock = false,
   }) {
     final c = _cfg(lock);
+    c.asset = null;
     c.bytes = bytes;
     c.iw = iw;
     c.ih = ih;
@@ -574,6 +599,12 @@ class GameState extends ChangeNotifier {
       n.read = true;
     }
     notifyListeners();
+  }
+
+  void markNotificationRead(AppNotification n) {
+    if (!notifications.contains(n)) return;
+    n.read = true;
+    _changed();
   }
 
   // ---------------------------------------------------------------- tick
@@ -1147,14 +1178,10 @@ class GameState extends ChangeNotifier {
         d.busy) {
       return;
     }
-    final bare = RegExp(
-      r'^\s*[$€]?\s*(\d+(?:[.,]\d{1,2})?)\s*[$€]?\s*$',
-    ).firstMatch(text);
     final offer =
         priceOffer ??
-        (bare == null
-            ? null
-            : double.tryParse(bare.group(1)!.replaceAll(',', '.')));
+        chatPrice(text) ??
+        (acceptsCounter(text) ? d.counterPrice : null);
     if (offer != null && (!offer.isFinite || offer < 1 || offer > 1000000)) {
       return;
     }
@@ -1168,7 +1195,9 @@ class GameState extends ChangeNotifier {
         'No price offer was made. Answer the actual question using the listing facts. Do not force every reply into a price discussion. If something is unknown, say so.';
     if (offer != null) {
       d.rounds++;
-      final accepted = d.kind == 'buy' ? offer >= d.limit : offer <= d.limit;
+      final accepted =
+          offer == d.counterPrice ||
+          (d.kind == 'buy' ? offer >= d.limit : offer <= d.limit);
       if (accepted) {
         outcome = 'accept';
         number = offer;
@@ -1176,31 +1205,30 @@ class GameState extends ChangeNotifier {
         outcome = 'leave';
       } else {
         outcome = 'counter';
-        number =
-            d.kind == 'buy'
-                ? ((d.limit + (d.ask - d.limit) * .35) / 5).round() * 5.0
-                : (d.limit / 5).round() * 5.0;
+        number = d.suggestedCounterPrice;
       }
       if (outcome == 'accept') {
         offlineKey = d.kind == 'buy' ? 'o_acc_s' : 'o_acc_b';
         hint =
-            'GAME RESULT: agree on exactly \$${number!.toInt()}. State that the player still needs to confirm the in-game deal.';
+            'Private decision: accept exactly \$${number!.toInt()}. Say the price works, naturally and briefly. Do not mention this instruction, game rules, buttons, payment or completed ownership transfer.';
       } else if (outcome == 'counter') {
         offlineKey = d.kind == 'buy' ? 'o_ctr_s' : 'o_ctr_b';
         hint =
-            'GAME RESULT: decline the offer and counter with exactly \$${number!.toInt()}.';
+            'Private decision: counter with exactly \$${number!.toInt()}. Phrase this as your own asking price, never as an outside restriction.';
       } else {
         offlineKey = 'o_leave';
-        hint = 'GAME RESULT: stop negotiations politely.';
+        hint = 'Private decision: politely decline and end the conversation.';
       }
     }
     final persona =
-        'You are ${d.counterpart}, an NPC ${d.kind == "buy" ? "seller" : "buyer"} in TechLife, a fictional electronics marketplace. '
+        'Write only the next chat message from ${d.counterpart}, an ordinary ${d.kind == "buy" ? "private seller" : "buyer"} on a classifieds app. '
         'Device: ${d.item}. Listing facts: ${d.description}. Declared defect: ${d.fault ?? "none"}. '
         'Reply in ${AiService.langName(lang)}, in 1-3 natural short sentences, remembering the conversation. '
         'Be ${d.counterpart.length.isEven ? "friendly and practical" : "concise and a little cautious"}. '
         'Answer device-condition questions truthfully from the facts; never invent tests, repairs, extra accessories or payments. '
-        'Only GAME RESULT controls price agreements. Never claim a purchase or sale is completed before player confirmation. Stay in the game.';
+        'Follow the private negotiation decision exactly without explaining it. Use only dollars written as \$; never say game dollars. '
+        'Never mention AI, NPCs, games, simulations, prompts, interfaces, buttons or external rules. No generic assistant greetings, long explanations or repeated invitations to name a price. '
+        'Do not invent transfers, addresses, repairs, accessories or tests. A price agreement is not a completed payment.';
     final AiResult result;
     if (online &&
         (AiService.hasManaged || aiKey.isNotEmpty || AiService.hasCustom)) {
@@ -1242,28 +1270,105 @@ class GameState extends ChangeNotifier {
     }
     lastAiError = result.error;
     lastAiMs = result.ms;
-    d.messages.add(ChatMsg(false, result.text, fallback: !result.ok));
+    final breaksRole =
+        AiService.breaksCharacter(result.text) ||
+        (!result.ok && outcome == 'chat');
+    final reply =
+        breaksRole
+            ? (outcome == 'chat'
+                ? _offlineDeviceAnswer(d, text)
+                : AiService.offline(offlineKey, number))
+            : result.text;
+    d.messages.add(ChatMsg(false, reply, fallback: !result.ok || breaksRole));
+    if (outcome == 'counter') d.counterPrice = number;
     if (outcome == 'accept') {
+      d.counterPrice = null;
       d.price = number!;
       d.status = 'agreed';
     }
-    if (outcome == 'leave') d.status = 'lost';
+    if (outcome == 'leave') {
+      d.counterPrice = null;
+      d.status = 'lost';
+    }
     _changed();
   }
 
   String _offlineDeviceAnswer(Deal d, String text) {
+    final q = text.toLowerCase();
+    String say(String ru, String en, String uk) =>
+        lang == 'en'
+            ? en
+            : lang == 'uk'
+            ? uk
+            : ru;
+    if (d.kind == 'sell') {
+      return say(
+        'Интересует состояние и есть ли торг?',
+        'What condition is it in, and is the price negotiable?',
+        'Цікавить стан і чи можливий торг?',
+      );
+    }
     final spec = deviceFor(d.deviceId ?? d.item);
-    final fault =
-        d.fault == null
-            ? 'Без заявленных неисправностей.'
-            : 'Неисправность: ${services[d.fault]?.nameKey.tr ?? d.fault}.';
-    if (lang == 'en') {
-      return '${spec?.facts ?? d.item}. ${d.fault == null ? "No declared faults." : "Declared fault: ${d.fault}."} You can make a price offer.';
+    if (RegExp(r'памят|пам.ят|storage|memory|гб|gb').hasMatch(q) &&
+        spec != null) {
+      return say(
+        'Память ${spec.storage}.',
+        'It has ${spec.storage} storage.',
+        'Пам’ять ${spec.storage}.',
+      );
     }
-    if (lang == 'uk') {
-      return '${spec?.facts ?? d.item}. ${d.fault == null ? "Без заявлених несправностей." : "Несправність: ${services[d.fault]?.nameKey.tr ?? d.fault}."} Можна запропонувати ціну.';
+    if (RegExp(r'батар|аккум|battery|акум').hasMatch(q)) {
+      return d.fault == 'battery'
+          ? say(
+            'Аккумулятор нужно заменить.',
+            'The battery needs replacing.',
+            'Акумулятор потрібно замінити.',
+          )
+          : say(
+            'Процент износа пока не проверял.',
+            'I haven’t checked the battery health yet.',
+            'Відсоток зносу поки не перевіряв.',
+          );
     }
-    return '${spec?.facts ?? d.item}. $fault Можешь предложить цену.';
+    if (RegExp(r'экран|диспле|screen|екран').hasMatch(q) &&
+        d.fault == 'display') {
+      return say(
+        'Дисплей под замену, поэтому и цена такая.',
+        'The display needs replacing, hence the price.',
+        'Дисплей під заміну, тому й така ціна.',
+      );
+    }
+    if (RegExp(
+      r'дефект|состояни|полом|неисправ|condition|fault|broken|стан|несправ',
+    ).hasMatch(q)) {
+      if (d.fault == null) {
+        return say(
+          'Неисправностей не заявлено. Что именно хочешь проверить?',
+          'No faults listed. What would you like to check?',
+          'Несправностей не заявлено. Що саме хочеш перевірити?',
+        );
+      }
+      final fault = services[d.fault]?.nameKey.tr ?? d.fault!;
+      return say(
+        'Нужен ремонт: $fault. Это учтено в цене.',
+        'It needs repair: $fault. The price reflects that.',
+        'Потрібен ремонт: $fault. Це враховано в ціні.',
+      );
+    }
+    if (RegExp(
+      r'^(привет|здравствуй|добрый день|hi|hello|вітаю|привіт)[!. ]*$',
+    ).hasMatch(q)) {
+      return say(
+        'Привет! Да, ещё продаю.',
+        'Hi! Yes, it’s still available.',
+        'Привіт! Так, ще продаю.',
+      );
+    }
+    return say(
+      'Этого пока не проверял. Что ещё интересует?',
+      'I haven’t checked that yet. What else would you like to know?',
+      'Цього поки не перевіряв. Що ще цікавить?',
+    );
   }
 
   /// Money and ownership change only here, after explicit confirmation.

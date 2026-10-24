@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../core/theme.dart';
 import 'shell.dart';
+import 'liquid_surface.dart';
 
 String money(num v) {
   final s = v.abs().round().toString();
@@ -17,11 +18,52 @@ String money(num v) {
 void toast(BuildContext c, String msg) {
   final m = ScaffoldMessenger.of(c);
   m.hideCurrentSnackBar();
-  m.showSnackBar(SnackBar(
-    content: Text(msg),
-    duration: const Duration(seconds: 2),
-    behavior: SnackBarBehavior.floating,
-  ));
+  m.showSnackBar(
+    SnackBar(
+      key: const ValueKey('system_toast'),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      padding: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      content: Semantics(
+        liveRegion: true,
+        child: LiquidSurface(
+          child: Row(
+            children: [
+              const Icon(
+                Icons.info_outline_rounded,
+                color: Color(0xFF176B81),
+                size: 24,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  msg,
+                  style: const TextStyle(
+                    color: Color(0xFF10283C),
+                    fontFamily: 'Roboto',
+                    fontSize: 14,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: MaterialLocalizations.of(c).closeButtonTooltip,
+                onPressed: m.hideCurrentSnackBar,
+                icon: const Icon(
+                  Icons.close,
+                  color: Color(0xFF38546A),
+                  size: 19,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      duration: const Duration(seconds: 4),
+      behavior: SnackBarBehavior.floating,
+    ),
+  );
 }
 
 IconData serviceIcon(String s) {
@@ -43,7 +85,12 @@ class Panel extends StatelessWidget {
   final Widget child;
   final EdgeInsets padding;
   final VoidCallback? onTap;
-  const Panel({super.key, required this.child, this.padding = const EdgeInsets.all(12), this.onTap});
+  const Panel({
+    super.key,
+    required this.child,
+    this.padding = const EdgeInsets.all(12),
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +102,7 @@ class Panel extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.white10),
       ),
-      child: child,
+      child: Material(type: MaterialType.transparency, child: child),
     );
     if (onTap == null) return box;
     return GestureDetector(onTap: onTap, child: box);
@@ -71,7 +118,14 @@ class AppPage extends StatelessWidget {
   /// true = use the whole width on tablets / PC (map, messages); otherwise the
   /// content is centred in a readable column.
   final bool wide;
-  const AppPage({super.key, required this.title, required this.child, this.actions = const [], this.onBack, this.wide = false});
+  const AppPage({
+    super.key,
+    required this.title,
+    required this.child,
+    this.actions = const [],
+    this.onBack,
+    this.wide = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -88,7 +142,13 @@ class AppPage extends StatelessWidget {
                   onPressed: onBack ?? () => context.read<Shell>().close(),
                 ),
                 Expanded(
-                  child: Text(title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
                 ...actions,
               ],
@@ -97,12 +157,16 @@ class AppPage extends StatelessWidget {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-              child: wide
-                  ? child
-                  : Align(
-                      alignment: Alignment.topCenter,
-                      child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 900), child: child),
-                    ),
+              child:
+                  wide
+                      ? child
+                      : Align(
+                        alignment: Alignment.topCenter,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 900),
+                          child: child,
+                        ),
+                      ),
             ),
           ),
         ],
@@ -116,7 +180,13 @@ class ChipRow extends StatelessWidget {
   final String selected;
   final String Function(String) label;
   final ValueChanged<String> onSelect;
-  const ChipRow({super.key, required this.ids, required this.selected, required this.label, required this.onSelect});
+  const ChipRow({
+    super.key,
+    required this.ids,
+    required this.selected,
+    required this.label,
+    required this.onSelect,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -144,5 +214,6 @@ class Empty extends StatelessWidget {
   final String text;
   const Empty(this.text, {super.key});
   @override
-  Widget build(BuildContext context) => Center(child: Text(text, style: const TextStyle(color: C.sub)));
+  Widget build(BuildContext context) =>
+      Center(child: Text(text, style: const TextStyle(color: C.sub)));
 }

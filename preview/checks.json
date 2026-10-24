@@ -1,13 +1,13 @@
 {
-  "version": "0.7.0+8",
+  "version": "0.8.0+9",
   "flutter": "3.47.7",
   "dart": "3.13.5",
   "analyze": "No issues found",
-  "tests": 66,
+  "tests": 74,
   "webRelease": true,
   "liveGeminiTested": true,
   "nativePackagesBuilt": false,
-  "serverTests": 10,
+  "serverTests": 12,
   "liveManagedIntegration": true,
   "embeddedSharedKey": false,
   "optionalLiveTestSkipped": true,
@@ -26,6 +26,9 @@
   "textScaleTested": 1.4,
   "softwareKeyboardTested": true,
   "newIconImported": true,
-  "liveGeminiTestedInVersion": "0.6.0",
-  "manualBrowserTested": false
+  "liveGeminiTestedInVersion": "0.8.0",
+  "manualBrowserTested": false,
+  "followupCoreTests": 6,
+  "bundledWallpapers": 4,
+  "liquidGlassToggleTested": true
 }

@@ -46,7 +46,7 @@ class _DynamicIslandState extends State<DynamicIsland>
     final repairs = gs.orders.where((o) => o.status == 'active').length;
     final title =
         busy
-            ? 'Gemini'
+            ? mt('Сообщение', 'Message', 'Повідомлення')
             : recent
             ? money(txn.amount)
             : repairs > 0

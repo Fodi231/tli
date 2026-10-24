@@ -20,27 +20,37 @@ class WallpaperView extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         if (cfg.hasImage)
-          LayoutBuilder(builder: (context, c) {
-            final cw = c.maxWidth, ch = c.maxHeight;
-            final cover = max(cw / cfg.iw, ch / cfg.ih);
-            final s = cfg.scale.clamp(1.0, 6.0).toDouble();
-            final dw = cfg.iw * cover * s, dh = cfg.ih * cover * s;
-            final mx = max(0.0, (dw - cw) / 2), my = max(0.0, (dh - ch) / 2);
-            final dx = (cfg.ox * cw).clamp(-mx, mx).toDouble();
-            final dy = (cfg.oy * ch).clamp(-my, my).toDouble();
-            return ClipRect(
-              child: OverflowBox(
-                minWidth: dw,
-                maxWidth: dw,
-                minHeight: dh,
-                maxHeight: dh,
-                child: Transform.translate(
-                  offset: Offset(dx, dy),
-                  child: Image.memory(cfg.bytes!, width: dw, height: dh, fit: BoxFit.fill, gaplessPlayback: true),
+          LayoutBuilder(
+            builder: (context, c) {
+              final cw = c.maxWidth, ch = c.maxHeight;
+              final cover = max(cw / cfg.iw, ch / cfg.ih);
+              final s = cfg.scale.clamp(1.0, 6.0).toDouble();
+              final dw = cfg.iw * cover * s, dh = cfg.ih * cover * s;
+              final mx = max(0.0, (dw - cw) / 2), my = max(0.0, (dh - ch) / 2);
+              final dx = (cfg.ox * cw).clamp(-mx, mx).toDouble();
+              final dy = (cfg.oy * ch).clamp(-my, my).toDouble();
+              return ClipRect(
+                child: OverflowBox(
+                  minWidth: dw,
+                  maxWidth: dw,
+                  minHeight: dh,
+                  maxHeight: dh,
+                  child: Transform.translate(
+                    offset: Offset(dx, dy),
+                    child: Image.memory(
+                      cfg.bytes!,
+                      width: dw,
+                      height: dh,
+                      fit: BoxFit.fill,
+                      gaplessPlayback: true,
+                    ),
+                  ),
                 ),
-              ),
-            );
-          })
+              );
+            },
+          )
+        else if (bundledWallpapers.containsKey(cfg.asset))
+          Image.asset(cfg.asset!, fit: BoxFit.cover, gaplessPlayback: true)
         else
           DecoratedBox(
             decoration: BoxDecoration(

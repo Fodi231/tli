@@ -81,6 +81,30 @@ class AiService {
 
   static String langName(String lang) => _langNames[lang] ?? 'English';
 
+  static bool breaksCharacter(String text) {
+    final s = text.toLowerCase();
+    return [
+      'игров',
+      'ігров',
+      'игра отклон',
+      'гра відхил',
+      'game dollar',
+      'in-game',
+      'game result',
+      'интерфейс',
+      'інтерфейс',
+      'interface',
+      'as an ai',
+      'language model',
+      'я ии',
+      'я — ии',
+      'я искусствен',
+      'я штучн',
+      'npc',
+      'не сошлись по цене, чтобы',
+    ].any(s.contains);
+  }
+
   static bool get hasCustom => customUrl.trim().isNotEmpty;
 
   static String keyKind(String k) {

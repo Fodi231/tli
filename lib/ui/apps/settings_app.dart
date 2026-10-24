@@ -478,6 +478,22 @@ class _SettingsAppState extends State<SettingsApp> {
             onSelectionChanged: (s) => g.setThemeMode(s.first),
           ),
         ),
+        const SizedBox(height: 12),
+        _group([
+          SwitchListTile(
+            key: const ValueKey('liquid_glass_switch'),
+            title: const Text('Liquid Glass'),
+            subtitle: Text(
+              mt(
+                'Прозрачность и размытие панелей',
+                'Translucent panels and blur',
+                'Прозорі панелі та розмиття',
+              ),
+            ),
+            value: gs.liquidGlass,
+            onChanged: g.setLiquidGlass,
+          ),
+        ]),
         const SizedBox(height: 18),
         Text(
           'wallpaper'.tr,
@@ -537,13 +553,84 @@ class _SettingsAppState extends State<SettingsApp> {
         ThemeFilter(
           light: light,
           child: SizedBox(
+            height: 144,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: bundledWallpapers.length,
+              separatorBuilder: (_, index) => const SizedBox(width: 10),
+              itemBuilder: (_, index) {
+                final asset = bundledWallpapers.keys.elementAt(index);
+                final selected = cfg.asset == asset && !cfg.hasImage;
+                return GestureDetector(
+                  key: ValueKey('wallpaper_asset_$index'),
+                  onTap: () => g.setWallpaperAsset(asset, lock: lockFlag),
+                  child: SizedBox(
+                    width: 76,
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 76,
+                          height: 112,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(15),
+                            border: Border.all(
+                              color: selected ? C.accent : Colors.white24,
+                              width: selected ? 3 : 1,
+                            ),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Image.asset(asset, fit: BoxFit.cover),
+                                if (selected)
+                                  const Center(
+                                    child: Icon(
+                                      Icons.check_circle,
+                                      color: Colors.white,
+                                      shadows: [
+                                        Shadow(
+                                          color: Colors.black54,
+                                          blurRadius: 5,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          bundledWallpapers[asset]!.tr,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        ThemeFilter(
+          light: light,
+          child: SizedBox(
             height: 104,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: wallpaperPresets.length,
               separatorBuilder: (_, __) => const SizedBox(width: 10),
               itemBuilder: (_, i) {
-                final sel = !cfg.hasImage && cfg.preset == i;
+                final sel =
+                    !cfg.hasImage && cfg.asset == null && cfg.preset == i;
                 return GestureDetector(
                   onTap: () => g.setWallpaperPreset(i, lock: lockFlag),
                   child: Column(

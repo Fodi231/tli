@@ -65,11 +65,7 @@ class _MarketChatState extends State<MarketChat> {
                 decimal: true,
               ),
               decoration: InputDecoration(
-                labelText: mt(
-                  'Игровые доллары',
-                  'Game dollars',
-                  'Ігрові долари',
-                ),
+                labelText: mt('Цена, \$', 'Price, \$', 'Ціна, \$'),
               ),
             ),
             actions: [
@@ -211,9 +207,9 @@ class _MarketChatState extends State<MarketChat> {
                               : compact
                               ? d.item
                               : mt(
-                                'Игровой собеседник',
-                                'Game character',
-                                'Ігровий співрозмовник',
+                                d.kind == 'buy' ? 'Продавец' : 'Покупатель',
+                                d.kind == 'buy' ? 'Seller' : 'Buyer',
+                                d.kind == 'buy' ? 'Продавець' : 'Покупець',
                               ),
                           style: const TextStyle(
                             fontSize: 11,
@@ -375,7 +371,11 @@ class _MarketChatState extends State<MarketChat> {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  mt('Без ИИ', 'Offline', 'Без ШІ'),
+                                  mt(
+                                    'Автоответ',
+                                    'Auto reply',
+                                    'Автовідповідь',
+                                  ),
                                   style: const TextStyle(
                                     fontSize: 10,
                                     color: Colors.blueGrey,

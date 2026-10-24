@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
 
+const bundledWallpapers = <String, String>{
+  'assets/wallpapers/peach.jpg': 'wp_peach_glass',
+  'assets/wallpapers/blue.jpg': 'wp_blue_glass',
+  'assets/wallpapers/teal.jpg': 'wp_teal_glass',
+  'assets/wallpapers/lavender.jpg': 'wp_lavender_glass',
+};
+
 /// Gradient wallpaper presets (4 colours each, top to bottom).
 const wallpaperPresets = <List<Color>>[
   [Color(0xFF050B1E), Color(0xFF0B3B4A), Color(0xFF0A1530), Color(0xFF070C1A)],

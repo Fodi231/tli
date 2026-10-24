@@ -350,6 +350,10 @@ class I18n {
     'wp_graphite': ['Графит', 'Graphite', 'Графіт'],
     'wp_rose': ['Роза', 'Rose', 'Роза'],
     'wp_midnight': ['Полночь', 'Midnight', 'Північ'],
+    'wp_peach_glass': ['Персик', 'Peach', 'Персик'],
+    'wp_blue_glass': ['Сапфир', 'Sapphire', 'Сапфір'],
+    'wp_teal_glass': ['Лагуна', 'Lagoon', 'Лагуна'],
+    'wp_lavender_glass': ['Лаванда', 'Lavender', 'Лаванда'],
     'photo_failed': [
       'Не удалось загрузить фото',
       'Could not load the photo',

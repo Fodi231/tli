@@ -1,7 +1,9 @@
 import 'dart:ui' as ui;
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/repair/device_profile.dart';
+import '../../core/market/device_catalog.dart';
 
 class AnatomySpec {
   final List<Offset> quad;
@@ -85,6 +87,8 @@ class PhotoAnatomy {
   final ui.Image image;
   final AnatomySpec spec;
   PhotoAnatomy(this.image, this.spec);
+  ui.Image? chassisImage;
+  Rect? chassisCrop;
   ui.Image? batteryImage;
   Rect? batteryCrop;
   PhotoAnatomy? exposed;
@@ -130,57 +134,56 @@ class PhotoAnatomy {
     'galaxys23': Rect.fromLTWH(.50, .464, .212, .28),
     'pixel7': Rect.fromLTWH(.06, .316, .212, .348),
   };
-  static Future<ui.Image> _decode(String path) async {
-    final bytes = await rootBundle.load(path);
-    final codec = await ui.instantiateImageCodec(
-      bytes.buffer.asUint8List(),
-      targetWidth: 1000,
-      allowUpscaling: false,
-    );
+  static final Map<String, PhotoAnatomy> _cache = {};
+  static Future<PhotoAnatomy> load(String id) async {
+    final cached = _cache[id];
+    if (cached != null) return cached;
+    final json =
+        jsonDecode(
+              await rootBundle.loadString(
+                'assets/repair/generated/atlas.json',
+                cache: false,
+              ),
+            )
+            as Map<String, dynamic>;
+    final m = Map<String, dynamic>.from(json[id]);
+    final raw = await rootBundle.load('assets/repair/generated/$id.png');
+    final codec = await ui.instantiateImageCodec(raw.buffer.asUint8List());
     final frame = await codec.getNextFrame();
     codec.dispose();
-    return frame.image;
+    Rect rect(dynamic a) => Rect.fromLTWH(
+      (a[0] as num).toDouble(),
+      (a[1] as num).toDouble(),
+      (a[2] as num).toDouble(),
+      (a[3] as num).toDouble(),
+    );
+    final sprites = (m['sprites'] as Map).map(
+      (k, v) => MapEntry(k as String, rect(v)),
+    );
+    final base = sprites['chassis']!;
+    final photo = PhotoAnatomy(
+      frame.image,
+      AnatomySpec(
+        [base.topLeft, base.topRight, base.bottomRight, base.bottomLeft],
+        sprites: sprites,
+        separateParts: true,
+        asset: 'assets/repair/generated/$id.png',
+      ),
+    );
+    if (m['chassisAsset'] != null) {
+      final bytes = await rootBundle.load(
+        'assets/repair/generated/${m['chassisAsset']}',
+      );
+      final decoder = await ui.instantiateImageCodec(
+        bytes.buffer.asUint8List(),
+      );
+      photo.chassisImage = (await decoder.getNextFrame()).image;
+      decoder.dispose();
+      photo.chassisCrop = rect(m['chassisCrop']);
+    }
+    _cache[id] = photo;
+    return photo;
   }
-
-  static final Map<String, Future<PhotoAnatomy>> _cache = {};
-  static Future<PhotoAnatomy> load(String id) =>
-      _cache.putIfAbsent(id, () async {
-        final bytes = await rootBundle.load(
-          anatomySpecs[id]?.asset ?? 'assets/repair/anatomy/$id.jpg',
-        );
-        final codec = await ui.instantiateImageCodec(
-          bytes.buffer.asUint8List(),
-          targetWidth: 1200,
-          allowUpscaling: false,
-        );
-        final frame = await codec.getNextFrame();
-        codec.dispose();
-        final photo = PhotoAnatomy(frame.image, anatomySpecs[id]!);
-        if (displaySpecs.containsKey(id)) {
-          photo.display = PhotoAnatomy(
-            await _decode('assets/repair/anatomy/${id}_display.jpg'),
-            displaySpecs[id]!,
-          );
-        }
-        if (batteryCrops.containsKey(id)) {
-          photo.batteryImage = await _decode(
-            'assets/repair/anatomy/${id}_battery.jpg',
-          );
-          photo.batteryCrop = batteryCrops[id];
-        }
-        if (id == 'galaxys23') {
-          photo.exposed = PhotoAnatomy(
-            await _decode('assets/repair/anatomy/galaxys23_detail.jpg'),
-            const AnatomySpec([
-              Offset(-.075, .313),
-              Offset(.28, .133),
-              Offset(.9125, .778),
-              Offset(.58, .993),
-            ]),
-          );
-        }
-        return photo;
-      });
 
   Offset uv(double x, double y) {
     final a = Offset.lerp(spec.quad[0], spec.quad[1], x)!;
@@ -239,7 +242,53 @@ class PhotoAnatomy {
     );
   }
 
+  void _bareChassis(Canvas c, Rect r) {
+    final img = chassisImage, crop = chassisCrop;
+    if (img != null && crop != null) {
+      c.drawImageRect(
+        img,
+        Rect.fromLTWH(
+          crop.left * img.width,
+          crop.top * img.height,
+          crop.width * img.width,
+          crop.height * img.height,
+        ),
+        r,
+        Paint()..filterQuality = FilterQuality.high,
+      );
+    } else {
+      region(c, r, const Rect.fromLTWH(0, 0, 1, 1));
+    }
+  }
+
   void body(Canvas c, Rect r, DeviceProfile profile) {
+    if (spec.separateParts) {
+      c.save();
+      final holes = Path();
+      for (final b in [profile.camera, profile.port]) {
+        final bay = Rect.fromLTWH(
+          r.left + b.x / (224 * profile.segments) * r.width,
+          r.top + b.y / 438 * r.height,
+          b.w / (224 * profile.segments) * r.width,
+          b.h / 438 * r.height,
+        );
+        c.drawRRect(
+          RRect.fromRectAndRadius(bay, const Radius.circular(5)),
+          Paint()
+            ..shader = const LinearGradient(
+              colors: [Color(0xFF343838), Color(0xFF141A1D)],
+            ).createShader(bay),
+        );
+        holes.addRRect(RRect.fromRectAndRadius(bay, const Radius.circular(5)));
+      }
+      c.clipPath(
+        Path.combine(PathOperation.difference, Path()..addRect(r), holes),
+      );
+      _bareChassis(c, r);
+      c.restore();
+      return;
+    }
+
     c.save();
     final shell =
         Path()..addRRect(RRect.fromRectAndRadius(r, const Radius.circular(18)));
@@ -306,6 +355,79 @@ class PhotoAnatomy {
         dest,
         Paint()..filterQuality = FilterQuality.high,
       );
+      if (type == 'cover_inside' && deviceFor(profile.id)!.magSafe) {
+        final panelWidth = dest.width / profile.segments;
+        final center = Offset(
+          dest.left + panelWidth * .5,
+          dest.top + dest.height * .56,
+        );
+        final radius = panelWidth * .33;
+        for (var i = 0; i < 20; i++) {
+          final angle = i * 3.141592653589793 * .1;
+          c.save();
+          c.translate(center.dx, center.dy);
+          c.rotate(angle);
+          c.drawRRect(
+            RRect.fromRectAndRadius(
+              Rect.fromLTWH(
+                radius,
+                -panelWidth * .025,
+                panelWidth * .065,
+                panelWidth * .05,
+              ),
+              Radius.circular(panelWidth * .01),
+            ),
+            Paint()..color = const Color(0xFF9BA0A2),
+          );
+          c.restore();
+        }
+        c.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromCenter(
+              center: center + Offset(0, radius * 1.35),
+              width: panelWidth * .08,
+              height: panelWidth * .16,
+            ),
+            const Radius.circular(1),
+          ),
+          Paint()..color = const Color(0xFF9BA0A2),
+        );
+      }
+      if (type == 'battery' || type.startsWith('aux_battery_')) {
+        final cell =
+            type == 'battery' ? 1 : (int.parse(type.split('_').last) + 2);
+        final lines = [
+          profile.manufacturer.toUpperCase(),
+          profile.modelName,
+          profile.segments > 1
+              ? 'Cell $cell / ${profile.segments}'
+              : '${profile.batteryMah} mAh',
+          if (profile.segments > 1 && profile.batteryMah > 0)
+            '${profile.batteryMah} mAh total',
+          'Li-ion',
+        ];
+        final font = (dest.width * .052).clamp(3.0, 10.0);
+        final tp = TextPainter(
+          text: TextSpan(
+            text: lines.join('\n'),
+            style: TextStyle(
+              fontFamily: 'Roboto',
+              fontSize: font,
+              height: 1.6,
+              color:
+                  profile.id == 'galaxys22' || profile.id == 'galaxyfold7'
+                      ? const Color(0xFF293138)
+                      : const Color(0xFFBDC5CC),
+            ),
+          ),
+          textAlign: TextAlign.center,
+          textDirection: TextDirection.ltr,
+        )..layout(maxWidth: dest.width * .82);
+        tp.paint(
+          c,
+          Offset(dest.center.dx - tp.width / 2, dest.center.dy - tp.height / 2),
+        );
+      }
       return;
     }
     final b =

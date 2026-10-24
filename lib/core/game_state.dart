@@ -63,6 +63,8 @@ class GameState extends ChangeNotifier {
 
   // --- appearance / settings
   String playerName = '';
+  bool onboardingComplete = false;
+  int avatarIndex = 0;
   int themeMode = 2; // 0 = system, 1 = light, 2 = dark
   bool liquidGlass = true;
   final WallpaperCfg homeWp = WallpaperCfg();
@@ -315,6 +317,9 @@ class GameState extends ChangeNotifier {
             .map((e) => Txn.fromJson(Map<String, dynamic>.from(e as Map)))
             .toList();
     playerName = (j['pname'] as String?) ?? '';
+    // Saves made before character creation already belong to an existing game.
+    onboardingComplete = (j['onboardingComplete'] as bool?) ?? true;
+    avatarIndex = ((j['avatarIndex'] as num?)?.toInt() ?? 0).clamp(0, 5);
     themeMode = ((j['theme'] as int?) ?? 2).clamp(0, 2).toInt();
     liquidGlass = j['liquidGlass'] != false;
     homeWp.loadJson(
@@ -391,6 +396,8 @@ class GameState extends ChangeNotifier {
     'stock': stock.map((e) => e.toJson()).toList(),
     'txns': txns.take(40).map((e) => e.toJson()).toList(),
     'pname': playerName,
+    'onboardingComplete': onboardingComplete,
+    'avatarIndex': avatarIndex,
     'theme': themeMode,
     'liquidGlass': liquidGlass,
     'wpHome': homeWp.toJson(),
@@ -439,6 +446,9 @@ class GameState extends ChangeNotifier {
   Future<void> resetAll() async {
     await _prefs?.remove('save');
     luma = LumaState();
+    onboardingComplete = false;
+    playerName = '';
+    avatarIndex = 0;
     balance = 1500;
     liquidGlass = true;
     reputation = 4.0;
@@ -482,8 +492,48 @@ class GameState extends ChangeNotifier {
     _changed();
   }
 
-  void setPlayerName(String n) {
-    playerName = n.trim();
+  static String normalizePlayerName(String value) =>
+      value.trim().replaceAll(RegExp(r'\s+'), ' ');
+
+  static String? validatePlayerName(String value) {
+    if (RegExp(r'[\x00-\x1F\x7F]').hasMatch(value)) return 'characters';
+    final name = normalizePlayerName(value);
+    if (name.runes.length < 2) return 'short';
+    if (name.runes.length > 24) return 'long';
+    return null;
+  }
+
+  /// Profile creation never grants money or resets a world. A second call
+  /// cannot create another character on top of this save.
+  Future<bool> createCharacter(String name, int avatar) async {
+    if (onboardingComplete || validatePlayerName(name) != null) return false;
+    final oldName = playerName, oldAvatar = avatarIndex;
+    playerName = normalizePlayerName(name);
+    avatarIndex = avatar.clamp(0, 5);
+    onboardingComplete = true;
+    try {
+      final saved =
+          await _prefs?.setString('save', jsonEncode(_toJson())) ?? true;
+      if (!saved) throw StateError('Profile was not saved');
+    } catch (_) {
+      playerName = oldName;
+      avatarIndex = oldAvatar;
+      onboardingComplete = false;
+      return false;
+    }
+    if (!_disposed) notifyListeners();
+    return true;
+  }
+
+  bool setPlayerName(String n) {
+    if (validatePlayerName(n) != null) return false;
+    playerName = normalizePlayerName(n);
+    _changed();
+    return true;
+  }
+
+  void setAvatar(int index) {
+    avatarIndex = index.clamp(0, 5);
     _changed();
   }
 

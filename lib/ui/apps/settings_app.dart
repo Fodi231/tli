@@ -19,6 +19,9 @@ import '../../core/wallpapers.dart';
 import '../shell.dart';
 import '../wallpaper.dart';
 import '../widgets.dart';
+import '../liquid_surface.dart';
+import '../ios_components.dart';
+import '../onboarding.dart' show GameOverview, profileNameError;
 import 'admin_app.dart';
 import '../market/marketplace_app.dart';
 import '../../core/market/market_strings.dart';
@@ -52,28 +55,33 @@ class _SettingsAppState extends State<SettingsApp> {
   Size _box = const Size(1, 1);
   double _s0 = 1;
 
-  static const names = {'ru': 'Русский', 'en': 'English', 'uk': 'Українська'};
+  static final names = {'ru': 'Русский', 'en': 'English', 'uk': 'Українська'};
 
-  static const _groups = <List<_Item>>[
+  static final _groups = <List<_Item>>[
     [
-      _Item('appearance', 'appearance', Icons.palette, Color(0xFF3B82F6)),
-      _Item('display', 'display', Icons.desktop_windows, Color(0xFF0EA5E9)),
-      _Item(
+      const _Item('appearance', 'appearance', Icons.palette, Color(0xFF3B82F6)),
+      const _Item(
+        'display',
+        'display',
+        Icons.desktop_windows,
+        Color(0xFF0EA5E9),
+      ),
+      const _Item(
         'notifications',
         'notifications',
         Icons.notifications,
         Color(0xFFEF4444),
       ),
-      _Item('sound', 'sound_vibe', Icons.volume_up, Color(0xFFEC4899)),
+      const _Item('sound', 'sound_vibe', Icons.volume_up, Color(0xFFEC4899)),
     ],
     [
-      _Item('language', 'language', Icons.language, Color(0xFF0EA5E9)),
-      _Item('ai', 'ai_network', Icons.cloud, Color(0xFF8B5CF6)),
-      _Item('data', 'data_saves', Icons.storage, Color(0xFF6B7280)),
+      const _Item('language', 'language', Icons.language, Color(0xFF0EA5E9)),
+      const _Item('ai', 'ai_network', Icons.cloud, Color(0xFF8B5CF6)),
+      const _Item('data', 'data_saves', Icons.storage, Color(0xFF6B7280)),
     ],
     [
-      _Item('about', 'about', Icons.info, Color(0xFF6B7280)),
-      _Item(
+      const _Item('about', 'about', Icons.info, Color(0xFF6B7280)),
+      const _Item(
         'admin',
         'admin_panel',
         Icons.admin_panel_settings,
@@ -103,7 +111,13 @@ class _SettingsAppState extends State<SettingsApp> {
     for (var i = 0; i < items.length; i++) {
       rows.add(items[i]);
       if (i < items.length - 1) {
-        rows.add(const Divider(height: 1, indent: 52, color: Colors.white12));
+        rows.add(
+          Divider(
+            height: 1,
+            indent: 58,
+            color: IosColors.of(context).separator.withValues(alpha: .65),
+          ),
+        );
       }
     }
     return Padding(
@@ -117,7 +131,10 @@ class _SettingsAppState extends State<SettingsApp> {
               padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
               child: Text(
                 footer,
-                style: const TextStyle(color: C.sub, fontSize: 12),
+                style: TextStyle(
+                  color: IosColors.of(context).secondary,
+                  fontSize: 12,
+                ),
               ),
             ),
         ],
@@ -146,17 +163,34 @@ class _SettingsAppState extends State<SettingsApp> {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
         child: Row(
           children: [
             _icon(icon, color),
             const SizedBox(width: 12),
-            Expanded(child: Text(title, style: const TextStyle(fontSize: 15))),
+            Expanded(
+              flex: 2,
+              child: Text(title, style: const TextStyle(fontSize: 15)),
+            ),
             if (value != null)
-              Text(value, style: const TextStyle(color: C.sub, fontSize: 14)),
+              Flexible(
+                child: Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: IosColors.of(context).secondary,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
             if (chevron) ...[
               const SizedBox(width: 4),
-              const Icon(Icons.chevron_right, color: C.sub, size: 20),
+              Icon(
+                Icons.chevron_right,
+                color: IosColors.of(context).secondary,
+                size: 20,
+              ),
             ],
           ],
         ),
@@ -177,11 +211,18 @@ class _SettingsAppState extends State<SettingsApp> {
         children: [
           _icon(icon, color),
           const SizedBox(width: 12),
-          Expanded(child: Text(title, style: const TextStyle(fontSize: 15))),
+          Expanded(
+            flex: 2,
+            child: Text(title, style: const TextStyle(fontSize: 15)),
+          ),
           Switch.adaptive(
+            key:
+                title == 'Liquid Glass'
+                    ? const ValueKey('liquid_glass_switch')
+                    : null,
             value: value,
             onChanged: onChanged,
-            activeTrackColor: C.green,
+            activeTrackColor: IosColors.of(context).green,
           ),
         ],
       ),
@@ -192,9 +233,6 @@ class _SettingsAppState extends State<SettingsApp> {
   void _toMain() => setState(() => page = 'main');
   void _toAppearance() => setState(() => page = 'appearance');
 
-  bool _isLight(GameState gs) =>
-      isLightMode(gs.themeMode, MediaQuery.platformBrightnessOf(context));
-
   // --------------------------------------------------------------- build
   @override
   Widget build(BuildContext context) {
@@ -203,62 +241,84 @@ class _SettingsAppState extends State<SettingsApp> {
     switch (page) {
       case 'profile':
         return AppPage(
+          key: PageStorageKey('settings_$page'),
           title: 'profile'.tr,
           onBack: onBack,
           child: _profile(gs),
         );
       case 'appearance':
         return AppPage(
+          key: PageStorageKey('settings_$page'),
           title: 'appearance'.tr,
           onBack: onBack,
           child: _appearance(gs),
         );
       case 'crop':
         return AppPage(
+          key: PageStorageKey('settings_$page'),
           title: 'wp_crop'.tr,
           onBack: _toAppearance,
           child: _crop(gs),
         );
       case 'display':
         return AppPage(
+          key: PageStorageKey('settings_$page'),
           title: 'display'.tr,
           onBack: onBack,
           child: _display(gs),
         );
       case 'notifications':
         return AppPage(
+          key: PageStorageKey('settings_$page'),
           title: 'notifications'.tr,
           onBack: onBack,
           child: _notifications(gs),
         );
       case 'sound':
         return AppPage(
+          key: PageStorageKey('settings_$page'),
           title: 'sound_vibe'.tr,
           onBack: onBack,
           child: _sound(gs),
         );
       case 'language':
         return AppPage(
+          key: PageStorageKey('settings_$page'),
           title: 'language'.tr,
           onBack: onBack,
           child: _language(gs),
         );
       case 'ai':
-        return AppPage(title: 'ai_network'.tr, onBack: onBack, child: _ai(gs));
+        return AppPage(
+          key: PageStorageKey('settings_$page'),
+          title: 'ai_network'.tr,
+          onBack: onBack,
+          child: _ai(gs),
+        );
       case 'data':
         return AppPage(
+          key: PageStorageKey('settings_$page'),
           title: 'data_saves'.tr,
           onBack: onBack,
           child: _data(gs),
         );
       case 'about':
-        return AppPage(title: 'about'.tr, onBack: onBack, child: _about(gs));
+        return AppPage(
+          key: PageStorageKey('settings_$page'),
+          title: 'about'.tr,
+          onBack: onBack,
+          child: _about(gs),
+        );
       case 'admin':
         return AdminAuth.unlocked
             ? AdminPanel(onBack: _toMain)
             : AdminLogin(onBack: _toMain, onDone: () => setState(() {}));
       default:
-        return AppPage(title: 'settings'.tr, child: _main(gs));
+        return AppPage(
+          key: PageStorageKey('settings_$page'),
+          title: 'settings'.tr,
+          child: _main(gs),
+        );
     }
   }
 
@@ -273,7 +333,7 @@ class _SettingsAppState extends State<SettingsApp> {
             prefixIcon: const Icon(Icons.search),
             hintText: 'search'.tr,
             filled: true,
-            fillColor: C.card,
+            fillColor: IosColors.of(context).surface,
             isDense: true,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
@@ -285,19 +345,13 @@ class _SettingsAppState extends State<SettingsApp> {
         if (q.isEmpty)
           _group([
             InkWell(
+              key: const ValueKey('settings_page_profile'),
               onTap: () => _open('profile'),
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Row(
                   children: [
-                    CircleAvatar(
-                      radius: 26,
-                      backgroundColor: C.accent,
-                      child: Text(
-                        name[0].toUpperCase(),
-                        style: const TextStyle(fontSize: 22),
-                      ),
-                    ),
+                    ProfileAvatar(name: name, index: gs.avatarIndex),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
@@ -311,13 +365,23 @@ class _SettingsAppState extends State<SettingsApp> {
                             ),
                           ),
                           Text(
-                            'profile'.tr,
-                            style: const TextStyle(color: C.sub, fontSize: 12),
+                            mt(
+                              'Персонаж и личные данные',
+                              'Character and profile',
+                              'Персонаж і особисті дані',
+                            ),
+                            style: TextStyle(
+                              color: IosColors.of(context).secondary,
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    const Icon(Icons.chevron_right, color: C.sub),
+                    Icon(
+                      Icons.chevron_right,
+                      color: IosColors.of(context).secondary,
+                    ),
                   ],
                 ),
               ),
@@ -335,17 +399,20 @@ class _SettingsAppState extends State<SettingsApp> {
             if (shown.isEmpty) return const SizedBox.shrink();
             return _group([
               for (final i in shown)
-                _row(
-                  i.icon,
-                  i.color,
-                  i.titleKey.tr,
-                  value:
-                      i.page == 'language'
-                          ? names[gs.lang]
-                          : (i.page == 'ai'
-                              ? (gs.online ? 'online'.tr : 'offline'.tr)
-                              : null),
-                  onTap: () => _open(i.page),
+                KeyedSubtree(
+                  key: ValueKey('settings_page_${i.page}'),
+                  child: _row(
+                    i.icon,
+                    i.color,
+                    i.titleKey.tr,
+                    value:
+                        i.page == 'language'
+                            ? names[gs.lang]
+                            : (i.page == 'ai'
+                                ? (gs.online ? 'online'.tr : 'offline'.tr)
+                                : null),
+                    onTap: () => _open(i.page),
+                  ),
                 ),
             ]);
           }(),
@@ -353,51 +420,113 @@ class _SettingsAppState extends State<SettingsApp> {
     );
   }
 
-  Widget _profile(GameState gs) {
-    return ListView(
-      children: [
-        Center(
-          child: CircleAvatar(
-            radius: 40,
-            backgroundColor: C.accent,
-            child: Text(
-              (gs.playerName.isEmpty ? 'player'.tr : gs.playerName)[0]
-                  .toUpperCase(),
-              style: const TextStyle(fontSize: 34),
+  Widget _profile(GameState gs) => ListView(
+    children: [
+      const SizedBox(height: 6),
+      Center(
+        child: ProfileAvatar(
+          name: nameCtrl.text,
+          index: gs.avatarIndex,
+          size: 96,
+        ),
+      ),
+      const SizedBox(height: 20),
+      Center(
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (var i = 0; i < profileColors.length; i++)
+              Semantics(
+                label: mt(
+                  'Цвет аватара ${i + 1}',
+                  'Avatar colour ${i + 1}',
+                  'Колір аватара ${i + 1}',
+                ),
+                selected: gs.avatarIndex == i,
+                child: GestureDetector(
+                  onTap: () => gs.setAvatar(i),
+                  child: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: profileColors[i],
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color:
+                            gs.avatarIndex == i
+                                ? IosColors.of(context).label
+                                : Colors.transparent,
+                        width: 3,
+                      ),
+                    ),
+                    child:
+                        gs.avatarIndex == i
+                            ? const Icon(
+                              Icons.check_rounded,
+                              size: 18,
+                              color: Colors.white,
+                            )
+                            : null,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 26),
+      _group(
+        [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'player_name'.tr,
+                  style: TextStyle(
+                    color: IosColors.of(context).secondary,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: nameCtrl,
+                  maxLength: 24,
+                  textCapitalization: TextCapitalization.words,
+                  onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(
+                    hintText: mt(
+                      'Имя персонажа',
+                      'Character name',
+                      'Ім’я персонажа',
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
+        ],
+        footer: mt(
+          'Профиль хранится на этом устройстве вместе с прогрессом игры.',
+          'Your profile is stored on this device with your game progress.',
+          'Профіль зберігається на цьому пристрої разом із прогресом гри.',
         ),
-        const SizedBox(height: 20),
-        Text(
-          'player_name'.tr,
-          style: const TextStyle(color: C.sub, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 6),
-        TextField(
-          controller: nameCtrl,
-          maxLength: 20,
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: C.card,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide.none,
-            ),
-          ),
-        ),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: FilledButton(
-            onPressed: () {
-              context.read<GameState>().setPlayerName(nameCtrl.text);
-              toast(context, 'saved'.tr);
-            },
-            child: Text('save'.tr),
-          ),
-        ),
-      ],
-    );
-  }
+      ),
+      FilledButton(
+        onPressed: () {
+          final error = profileNameError(nameCtrl.text);
+          if (error != null) {
+            toast(context, error);
+            return;
+          }
+          gs.setPlayerName(nameCtrl.text);
+          toast(context, 'saved'.tr);
+        },
+        child: Text('save'.tr),
+      ),
+    ],
+  );
 
   // ----------------------------------------------------------- appearance
   Future<void> _pickPhoto(bool lock) async {
@@ -441,9 +570,98 @@ class _SettingsAppState extends State<SettingsApp> {
     });
   }
 
+  Widget _glassPreview(GameState gs) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        key: const ValueKey('glass_live_preview'),
+        height: 170,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF508BFF), Color(0xFFB095FF), Color(0xFF64DBC7)],
+          ),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              left: -10,
+              top: 20,
+              child: Transform.rotate(
+                angle: -.6,
+                child: Container(
+                  width: 260,
+                  height: 38,
+                  color: Colors.white.withValues(alpha: .55),
+                ),
+              ),
+            ),
+            Positioned(
+              right: -25,
+              bottom: -35,
+              child: Container(
+                width: 165,
+                height: 165,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF6651D8),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(22),
+                child: LiquidSurface(
+                  padding: const EdgeInsets.all(18),
+                  child: Row(
+                    children: [
+                      Icon(
+                        gs.liquidGlass
+                            ? Icons.blur_on_rounded
+                            : Icons.layers_rounded,
+                        size: 29,
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Liquid Glass',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              gs.liquidGlass
+                                  ? mt('Включён', 'On', 'Увімкнено')
+                                  : mt('Выключен', 'Off', 'Вимкнено'),
+                              style: TextStyle(
+                                color: IosColors.of(context).secondary,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+
   Widget _appearance(GameState gs) {
     final g = context.read<GameState>();
-    final light = _isLight(gs);
     final lockFlag = _target == 'lock' && gs.lockSeparate;
     final cfg = lockFlag ? gs.lockWp : gs.homeWp;
     final ratio = Shell.phoneSize.width / Shell.phoneSize.height;
@@ -451,54 +669,97 @@ class _SettingsAppState extends State<SettingsApp> {
       children: [
         Text(
           'theme'.tr,
-          style: const TextStyle(color: C.sub, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: IosColors.of(context).secondary,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         const SizedBox(height: 6),
-        SizedBox(
-          width: double.infinity,
-          child: SegmentedButton<int>(
-            showSelectedIcon: false,
-            segments: [
-              ButtonSegment(
-                value: 0,
-                icon: const Icon(Icons.brightness_auto, size: 18),
-                label: Text('theme_system'.tr),
+        Row(
+          children: [
+            for (var i = 0; i < 3; i++)
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(right: i < 2 ? 8 : 0),
+                  child: Semantics(
+                    selected: gs.themeMode == i,
+                    button: true,
+                    child: InkWell(
+                      onTap: () => g.setThemeMode(i),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 16,
+                          horizontal: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: IosColors.of(context).surface,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color:
+                                gs.themeMode == i
+                                    ? IosColors.of(context).blue
+                                    : IosColors.of(context).separator,
+                            width: gs.themeMode == i ? 2 : .7,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(
+                              [
+                                Icons.brightness_auto_rounded,
+                                Icons.light_mode_rounded,
+                                Icons.dark_mode_rounded,
+                              ][i],
+                              size: 25,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              [
+                                'theme_system'.tr,
+                                'theme_light'.tr,
+                                'theme_dark'.tr,
+                              ][i],
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
-              ButtonSegment(
-                value: 1,
-                icon: const Icon(Icons.light_mode, size: 18),
-                label: Text('theme_light'.tr),
-              ),
-              ButtonSegment(
-                value: 2,
-                icon: const Icon(Icons.dark_mode, size: 18),
-                label: Text('theme_dark'.tr),
-              ),
-            ],
-            selected: {gs.themeMode},
-            onSelectionChanged: (s) => g.setThemeMode(s.first),
-          ),
+          ],
         ),
         const SizedBox(height: 12),
-        _group([
-          SwitchListTile(
-            key: const ValueKey('liquid_glass_switch'),
-            title: const Text('Liquid Glass'),
-            subtitle: Text(
-              mt(
-                'Прозрачность и размытие панелей',
-                'Translucent panels and blur',
-                'Прозорі панелі та розмиття',
-              ),
+        _group(
+          [
+            _switch(
+              Icons.blur_on_rounded,
+              const Color(0xFF8052E9),
+              'Liquid Glass',
+              gs.liquidGlass,
+              g.setLiquidGlass,
             ),
-            value: gs.liquidGlass,
-            onChanged: g.setLiquidGlass,
+          ],
+          footer: mt(
+            'Меняет панели приложений, док и уведомления. Без эффекта панели непрозрачные, размытие отключено.',
+            'Changes app panels, the dock and notifications. When off, surfaces are opaque and blur is disabled.',
+            'Змінює панелі застосунків, док і сповіщення. Без ефекту панелі непрозорі, розмиття вимкнене.',
           ),
-        ]),
+        ),
+        _glassPreview(gs),
         const SizedBox(height: 18),
         Text(
           'wallpaper'.tr,
-          style: const TextStyle(color: C.sub, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: IosColors.of(context).secondary,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         const SizedBox(height: 6),
         _group([
@@ -529,10 +790,8 @@ class _SettingsAppState extends State<SettingsApp> {
               ),
             ),
           ),
-        // The page is drawn through the light-theme filter; ThemeFilter undoes
-        // it so the preview shows the real wallpaper colours.
         ThemeFilter(
-          light: light,
+          light: false,
           child: Center(
             child: Container(
               width: 150,
@@ -552,7 +811,7 @@ class _SettingsAppState extends State<SettingsApp> {
         ),
         const SizedBox(height: 12),
         ThemeFilter(
-          light: light,
+          light: false,
           child: SizedBox(
             height: 144,
             child: ListView.separated(
@@ -622,7 +881,7 @@ class _SettingsAppState extends State<SettingsApp> {
         ),
         const SizedBox(height: 12),
         ThemeFilter(
-          light: light,
+          light: false,
           child: SizedBox(
             height: 104,
             child: ListView.separated(
@@ -744,7 +1003,6 @@ class _SettingsAppState extends State<SettingsApp> {
   Widget _crop(GameState gs) {
     final d = _draft;
     if (d == null) return Empty('empty'.tr);
-    final light = _isLight(gs);
     final ratio = Shell.phoneSize.width / Shell.phoneSize.height;
     void zoomBy(double f) {
       setState(() {
@@ -758,7 +1016,10 @@ class _SettingsAppState extends State<SettingsApp> {
         Text(
           'wp_drag_hint'.tr,
           textAlign: TextAlign.center,
-          style: const TextStyle(color: C.sub, fontSize: 13),
+          style: TextStyle(
+            color: IosColors.of(context).secondary,
+            fontSize: 13,
+          ),
         ),
         const SizedBox(height: 8),
         Expanded(
@@ -785,7 +1046,7 @@ class _SettingsAppState extends State<SettingsApp> {
                         });
                       },
                       child: ThemeFilter(
-                        light: light,
+                        light: false,
                         child: Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(20),
@@ -806,7 +1067,7 @@ class _SettingsAppState extends State<SettingsApp> {
         ),
         Row(
           children: [
-            const Icon(Icons.zoom_out, color: C.sub),
+            Icon(Icons.zoom_out, color: IosColors.of(context).secondary),
             Expanded(
               child: Slider(
                 value: d.scale.clamp(1.0, 5.0).toDouble(),
@@ -819,7 +1080,7 @@ class _SettingsAppState extends State<SettingsApp> {
                     }),
               ),
             ),
-            const Icon(Icons.zoom_in, color: C.sub),
+            Icon(Icons.zoom_in, color: IosColors.of(context).secondary),
           ],
         ),
         Row(
@@ -891,7 +1152,10 @@ class _SettingsAppState extends State<SettingsApp> {
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         t,
-        style: const TextStyle(color: C.sub, fontWeight: FontWeight.w600),
+        style: TextStyle(
+          color: IosColors.of(context).secondary,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
     return ListView(
@@ -905,7 +1169,10 @@ class _SettingsAppState extends State<SettingsApp> {
         const SizedBox(height: 6),
         Text(
           'layout_hint'.tr,
-          style: const TextStyle(color: C.sub, fontSize: 12),
+          style: TextStyle(
+            color: IosColors.of(context).secondary,
+            fontSize: 12,
+          ),
         ),
         const SizedBox(height: 18),
         title('${'ui_scale'.tr}: ${ui.round()}%'),
@@ -964,7 +1231,10 @@ class _SettingsAppState extends State<SettingsApp> {
             padding: const EdgeInsets.only(bottom: 18),
             child: Text(
               'desktop_only_hint'.tr,
-              style: const TextStyle(color: C.sub, fontSize: 12),
+              style: TextStyle(
+                color: IosColors.of(context).secondary,
+                fontSize: 12,
+              ),
             ),
           ),
         title('map_style'.tr),
@@ -981,7 +1251,10 @@ class _SettingsAppState extends State<SettingsApp> {
         const SizedBox(height: 6),
         Text(
           'map_style_hint'.tr,
-          style: const TextStyle(color: C.sub, fontSize: 12),
+          style: TextStyle(
+            color: IosColors.of(context).secondary,
+            fontSize: 12,
+          ),
         ),
       ],
     );
@@ -1001,12 +1274,27 @@ class _SettingsAppState extends State<SettingsApp> {
           ),
           _switch(
             Icons.chat_bubble,
-            C.green,
+            IosColors.of(context).green,
             'notif_deals'.tr,
             gs.notifDeals,
             g.setNotifDeals,
           ),
         ]),
+        OutlinedButton.icon(
+          onPressed:
+              () => toast(
+                context,
+                mt(
+                  'Так выглядят системные сообщения TechLife.',
+                  'This is a TechLife system notification.',
+                  'Такий вигляд мають системні сповіщення TechLife.',
+                ),
+              ),
+          icon: const Icon(Icons.notifications_none_rounded),
+          label: Text(
+            mt('Показать пример', 'Show preview', 'Показати приклад'),
+          ),
+        ),
       ],
     );
   }
@@ -1102,7 +1390,7 @@ class _SettingsAppState extends State<SettingsApp> {
         _group([
           _row(
             gs.online ? Icons.wifi : Icons.wifi_off,
-            gs.online ? C.green : C.red,
+            gs.online ? IosColors.of(context).green : C.red,
             gs.online ? 'online'.tr : 'no_internet'.tr,
             chevron: false,
           ),
@@ -1138,7 +1426,10 @@ class _SettingsAppState extends State<SettingsApp> {
         ),
         Text(
           'gemini_key'.tr,
-          style: const TextStyle(color: C.sub, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: IosColors.of(context).secondary,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         const SizedBox(height: 6),
         TextField(
@@ -1147,7 +1438,7 @@ class _SettingsAppState extends State<SettingsApp> {
           decoration: InputDecoration(
             hintText: 'AIza… / AQ.…',
             filled: true,
-            fillColor: C.card,
+            fillColor: IosColors.of(context).surface,
             isDense: true,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
@@ -1158,7 +1449,10 @@ class _SettingsAppState extends State<SettingsApp> {
         const SizedBox(height: 6),
         Text(
           '${'key_hint'.tr} ${'ai_hint_own'.tr}',
-          style: const TextStyle(color: C.sub, fontSize: 12),
+          style: TextStyle(
+            color: IosColors.of(context).secondary,
+            fontSize: 12,
+          ),
         ),
         const SizedBox(height: 8),
         Align(
@@ -1209,14 +1503,15 @@ class _SettingsAppState extends State<SettingsApp> {
   }
 
   Widget _about(GameState gs) {
-    final light = _isLight(gs);
     return ListView(
       children: [
+        const GameOverview(),
+        const SizedBox(height: 20),
         Panel(
           child: Column(
             children: [
               ThemeFilter(
-                light: light,
+                light: false,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(22),
                   child: Image.asset(
@@ -1237,12 +1532,15 @@ class _SettingsAppState extends State<SettingsApp> {
               Text(
                 'about_text'.tr,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: C.sub),
+                style: TextStyle(color: IosColors.of(context).secondary),
               ),
               const SizedBox(height: 6),
-              const Text(
+              Text(
                 'v$kAppVersion',
-                style: TextStyle(color: C.sub, fontSize: 12),
+                style: TextStyle(
+                  color: IosColors.of(context).secondary,
+                  fontSize: 12,
+                ),
               ),
               const SizedBox(height: 14),
               TextButton.icon(

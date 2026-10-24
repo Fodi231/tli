@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import '../../core/game_state.dart';
 import '../../core/models.dart';
 import '../shell.dart';
+import '../widgets.dart' show toast;
+import '../liquid_surface.dart';
 import '../luma/luma_card.dart';
 
 String lt(String ru, String en, String uk) => lumaText(ru, en, uk);
@@ -41,14 +43,7 @@ class _BankAppState extends State<BankApp> {
   double credit = 1000;
   GameState get g => context.read<GameState>();
   void go(String p) => setState(() => page = p);
-  void tell(String text) => ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(text),
-      backgroundColor: lumaInk,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-    ),
-  );
+  void tell(String text) => toast(context, text);
   String get failed => lt(
     'Недостаточно средств, карта заморожена или превышен лимит.',
     'Insufficient funds, frozen card or daily limit exceeded.',
@@ -81,22 +76,15 @@ class _BankAppState extends State<BankApp> {
       ],
     ),
   );
-  Widget box(Widget child, {EdgeInsets? padding}) => Container(
-    margin: const EdgeInsets.only(bottom: 10),
-    padding: padding ?? const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: .74),
-      borderRadius: BorderRadius.circular(22),
-      border: Border.all(color: Colors.white),
-      boxShadow: [
-        BoxShadow(
-          color: lumaPurple.withValues(alpha: .035),
-          blurRadius: 16,
-          offset: const Offset(0, 5),
-        ),
-      ],
+  Widget box(Widget child, {EdgeInsets? padding}) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: LiquidSurface(
+      light: true,
+      tint: const Color(0xFFFEFCFF),
+      radius: 22,
+      padding: padding ?? const EdgeInsets.all(16),
+      child: child,
     ),
-    child: child,
   );
   Widget muted(String t) =>
       Text(t, style: const TextStyle(color: lumaMuted, fontSize: 13));
@@ -428,64 +416,61 @@ class _BankAppState extends State<BankApp> {
       Icons.trending_up_rounded,
       Icons.work_outline_rounded,
     ];
-    return Container(
-      margin: const EdgeInsets.fromLTRB(8, 5, 8, 9),
-      padding: const EdgeInsets.all(5),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: .72),
-        borderRadius: BorderRadius.circular(29),
-        border: Border.all(color: Colors.white, width: 1.5),
-        boxShadow: [
-          BoxShadow(color: lumaPurple.withValues(alpha: .06), blurRadius: 18),
-        ],
-      ),
-      child: Row(
-        children: List.generate(
-          5,
-          (i) => Expanded(
-            child: InkWell(
-              key: ValueKey('luma_tab_$i'),
-              onTap:
-                  () => setState(() {
-                    tab = i;
-                    search = '';
-                  }),
-              borderRadius: BorderRadius.circular(24),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                padding: const EdgeInsets.symmetric(
-                  vertical: 11,
-                  horizontal: 1,
-                ),
-                decoration: BoxDecoration(
-                  color:
-                      tab == i
-                          ? lumaPurple.withValues(alpha: .10)
-                          : Colors.transparent,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      icons[i],
-                      color: tab == i ? lumaPurple : lumaMuted,
-                      size: 23,
-                    ),
-                    const SizedBox(height: 5),
-                    FittedBox(
-                      child: Text(
-                        labels[i],
-                        maxLines: 1,
-                        style: TextStyle(
-                          color: tab == i ? lumaPurple : lumaMuted,
-                          fontSize: 9,
-                          fontWeight:
-                              tab == i ? FontWeight.w700 : FontWeight.w500,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 5, 8, 9),
+      child: LiquidSurface(
+        light: true,
+        tint: const Color(0xFFF9F5FF),
+        radius: 29,
+        padding: const EdgeInsets.all(5),
+        child: Row(
+          children: List.generate(
+            5,
+            (i) => Expanded(
+              child: InkWell(
+                key: ValueKey('luma_tab_$i'),
+                onTap:
+                    () => setState(() {
+                      tab = i;
+                      search = '';
+                    }),
+                borderRadius: BorderRadius.circular(24),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 11,
+                    horizontal: 1,
+                  ),
+                  decoration: BoxDecoration(
+                    color:
+                        tab == i
+                            ? lumaPurple.withValues(alpha: .10)
+                            : Colors.transparent,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        icons[i],
+                        color: tab == i ? lumaPurple : lumaMuted,
+                        size: 23,
+                      ),
+                      const SizedBox(height: 5),
+                      FittedBox(
+                        child: Text(
+                          labels[i],
+                          maxLines: 1,
+                          style: TextStyle(
+                            color: tab == i ? lumaPurple : lumaMuted,
+                            fontSize: 9,
+                            fontWeight:
+                                tab == i ? FontWeight.w700 : FontWeight.w500,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

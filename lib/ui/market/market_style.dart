@@ -99,8 +99,12 @@ class MarketSurface extends StatelessWidget {
     this.shadow = false,
   });
   @override
-  Widget build(BuildContext context) =>
-      LiquidSurface(padding: padding, radius: radius, child: child);
+  Widget build(BuildContext context) => LiquidSurface(
+    light: true,
+    padding: padding,
+    radius: radius,
+    child: child,
+  );
 }
 
 class MarketPill extends StatelessWidget {

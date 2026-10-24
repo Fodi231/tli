@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui' show ImageFilter;
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -28,6 +27,8 @@ import 'market/marketplace_app.dart';
 import 'phone/dynamic_island.dart';
 import 'wallpaper.dart';
 import 'widgets.dart';
+import 'liquid_surface.dart';
+import 'system_notice.dart';
 
 /// Layout modes (Settings -> Display): automatic, phone or tablet / PC.
 /// Tablet / PC fills the whole window; "phone" on a wide screen shows a
@@ -48,7 +49,12 @@ class PhoneShell extends StatelessWidget {
       final matching = gs.orders.where((o) => o.id == id);
       if (id == RepairSession.practiceId ||
           (matching.isNotEmpty && supportsWorkbench(matching.first.device))) {
-        return Scaffold(body: RepairApp(key: ValueKey(id), orderId: id));
+        return Scaffold(
+          body: SystemNoticeHost(
+            topInset: 12,
+            child: RepairApp(key: ValueKey(id), orderId: id),
+          ),
+        );
       }
     }
     return LayoutBuilder(
@@ -76,14 +82,16 @@ class PhoneShell extends StatelessWidget {
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(36),
-                              child: const PhoneScreen(),
+                              child: const SystemNoticeHost(
+                                child: PhoneScreen(),
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
                   )
-                  : const PhoneScreen(),
+                  : const SystemNoticeHost(child: PhoneScreen()),
         );
       },
     );
@@ -110,17 +118,8 @@ class PhoneScreen extends StatelessWidget {
       body = const HomeScreen();
       key = 'home';
     } else {
-      // Apps are drawn dark; the light theme inverts them (the wallpaper,
-      // lock screen and home screen are not affected).
-      body = ThemeFilter(
-        light:
-            light &&
-            sh.app != 'market' &&
-            sh.app != 'messages' &&
-            sh.app != 'notifications',
-        child: AppHost(id: sh.app!, arg: sh.arg),
-      );
-      key = 'app_${sh.app}_${sh.arg}_$light';
+      body = AppHost(id: sh.app!, arg: sh.arg);
+      key = 'app_${sh.app}_${sh.arg}';
     }
     return LayoutBuilder(
       builder: (context, c) {
@@ -133,8 +132,11 @@ class PhoneScreen extends StatelessWidget {
                 StatusBar(
                   light:
                       sh.unlocked &&
-                      (sh.app == 'market' ||
-                          (sh.app == 'messages' || sh.app == 'notifications')),
+                      sh.app != null &&
+                      (light ||
+                          sh.app == 'market' ||
+                          sh.app == 'messages' ||
+                          sh.app == 'bank'),
                 ),
                 Expanded(
                   child: AnimatedSwitcher(
@@ -160,9 +162,11 @@ class PhoneScreen extends StatelessWidget {
                   child: Container(
                     height: 19,
                     color:
-                        sh.app == 'market' ||
-                                (sh.app == 'messages' ||
-                                    sh.app == 'notifications')
+                        sh.app != null &&
+                                (light ||
+                                    sh.app == 'market' ||
+                                    sh.app == 'messages' ||
+                                    sh.app == 'bank')
                             ? Colors.white
                             : Colors.transparent,
                     alignment: Alignment.center,
@@ -171,9 +175,11 @@ class PhoneScreen extends StatelessWidget {
                       height: 4,
                       decoration: BoxDecoration(
                         color:
-                            sh.app == 'market' ||
-                                    (sh.app == 'messages' ||
-                                        sh.app == 'notifications')
+                            sh.app != null &&
+                                    (light ||
+                                        sh.app == 'market' ||
+                                        sh.app == 'messages' ||
+                                        sh.app == 'bank')
                                 ? Colors.black87
                                 : Colors.white70,
                         borderRadius: BorderRadius.circular(4),
@@ -306,27 +312,12 @@ class Glass extends StatelessWidget {
     this.color = const Color(0x28FFFFFF),
   });
   @override
-  Widget build(BuildContext context) => ClipRRect(
-    borderRadius: BorderRadius.circular(25),
-    child: BackdropFilter(
-      enabled: context.watch<GameState>().liquidGlass,
-      filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-      child: Container(
-        padding: padding,
-        decoration: BoxDecoration(
-          color:
-              context.watch<GameState>().liquidGlass
-                  ? color
-                  : const Color(0xFF293A50),
-          borderRadius: BorderRadius.circular(25),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: .16),
-            width: .7,
-          ),
-        ),
-        child: child,
-      ),
-    ),
+  Widget build(BuildContext context) => LiquidSurface(
+    light: false,
+    tint: color == const Color(0x28FFFFFF) ? const Color(0xFF34455D) : color,
+    radius: 25,
+    padding: padding,
+    child: child,
   );
 }
 

@@ -70,7 +70,9 @@ class _LegacyRepairAppState extends State<LegacyRepairApp> {
                               ),
                               Text(
                                 money(o.price),
-                                style: const TextStyle(color: C.green),
+                                style: TextStyle(
+                                  color: IosColors.of(context).green,
+                                ),
                               ),
                             ],
                           ),
@@ -94,7 +96,11 @@ class _LegacyRepairAppState extends State<LegacyRepairApp> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.check_circle, size: 72, color: C.green),
+              Icon(
+                Icons.check_circle,
+                size: 72,
+                color: IosColors.of(context).green,
+              ),
               const SizedBox(height: 12),
               Text(
                 'finish_ok'.tr,
@@ -106,11 +112,14 @@ class _LegacyRepairAppState extends State<LegacyRepairApp> {
               const SizedBox(height: 8),
               Text(
                 '${'reward'.tr}: ${money(reward!)}',
-                style: const TextStyle(color: C.green, fontSize: 18),
+                style: TextStyle(
+                  color: IosColors.of(context).green,
+                  fontSize: 18,
+                ),
               ),
               Text(
                 '${'mistakes'.tr}: $mistakes',
-                style: const TextStyle(color: C.sub),
+                style: TextStyle(color: IosColors.of(context).secondary),
               ),
               const SizedBox(height: 20),
               FilledButton(
@@ -167,8 +176,8 @@ class _LegacyRepairAppState extends State<LegacyRepairApp> {
                 ),
                 Text(
                   money(order.price),
-                  style: const TextStyle(
-                    color: C.green,
+                  style: TextStyle(
+                    color: IosColors.of(context).green,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -176,16 +185,21 @@ class _LegacyRepairAppState extends State<LegacyRepairApp> {
             ),
           ),
           const SizedBox(height: 10),
-          Text('steps_hint'.tr, style: const TextStyle(color: C.sub)),
+          Text(
+            'steps_hint'.tr,
+            style: TextStyle(color: IosColors.of(context).secondary),
+          ),
           const SizedBox(height: 4),
           Text(
             '${'mistakes'.tr}: $mistakes',
-            style: TextStyle(color: mistakes > 0 ? C.red : C.sub),
+            style: TextStyle(
+              color: mistakes > 0 ? C.red : IosColors.of(context).secondary,
+            ),
           ),
           const SizedBox(height: 8),
           LinearProgressIndicator(
             value: next / 6,
-            color: C.green,
+            color: IosColors.of(context).green,
             backgroundColor: Colors.white12,
           ),
           const SizedBox(height: 10),
@@ -237,13 +251,21 @@ class _LegacyRepairAppState extends State<LegacyRepairApp> {
         children: [
           Icon(
             done ? Icons.check_circle : Icons.radio_button_unchecked,
-            color: done ? C.green : C.sub,
+            color:
+                done
+                    ? IosColors.of(context).green
+                    : IosColors.of(context).secondary,
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               'step$n'.tr,
-              style: TextStyle(color: done ? C.sub : C.text),
+              style: TextStyle(
+                color:
+                    done
+                        ? IosColors.of(context).secondary
+                        : IosColors.of(context).label,
+              ),
             ),
           ),
           if (hints && !done)

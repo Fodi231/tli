@@ -117,7 +117,7 @@ class ModelArtwork {
               ? (profile.pixel
                   ? 'TENSOR'
                   : profile.rearAccess
-                  ? 'QUALCOMM'
+                  ? (profile.manufacturer == 'HUAWEI' ? 'KIRIN' : 'QUALCOMM')
                   : 'APL')
               : 'RF ${y + x + 1}',
           r.center,
@@ -230,7 +230,7 @@ class ModelArtwork {
             ? 'Li-ion Battery'
             : profile.pixel
             ? 'Google · Li-ion'
-            : 'SAMSUNG',
+            : profile.manufacturer.toUpperCase(),
         r.center - const Offset(0, 41),
         r.height > 130 ? 10 : 8,
         Colors.white60,
@@ -240,7 +240,7 @@ class ModelArtwork {
         c,
         profile.batteryMah == 0
             ? 'Dual-cell pack'
-            : '${profile.segments > 1 ? "Pack " : ""}${profile.batteryMah} mAh',
+            : '${profile.batteryMah} mAh${profile.segments > 1 ? " total" : ""}',
         r.center - const Offset(0, 18),
         9,
         Colors.white54,
@@ -488,29 +488,23 @@ class ModelArtwork {
 
   void shield(Canvas c, Rect r) {
     if (profile.rearAccess) {
-      plate(c, r, color: const Color(0xFF26292D), radius: 8);
-      final coil = Rect.fromCenter(
-        center: r.center - const Offset(0, 17),
-        width: r.width * .78,
-        height: r.width * .78,
-      );
-      for (var i = 0; i < 11; i++) {
-        c.drawOval(
-          coil.deflate(i * 3.1),
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.4
-            ..color = const Color(0xFF746D5D),
+      // An FPC shield is not a MagSafe magnet array. Samsung and HUAWEI use
+      // separate wireless/NFC assemblies, supplied by their model atlas.
+      plate(c, r, color: const Color(0xFF575C60), radius: 6);
+      for (var i = 0; i < 3; i++) {
+        c.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(
+              r.left + r.width * .12,
+              r.top + r.height * (.15 + i * .23),
+              r.width * .7,
+              r.height * .13,
+            ),
+            const Radius.circular(2),
+          ),
+          Paint()..color = const Color(0xFF292D32),
         );
       }
-      label(
-        c,
-        'NFC / WIRELESS CHARGING',
-        r.bottomCenter - const Offset(0, 22),
-        6,
-        Colors.white38,
-        center: true,
-      );
     } else if (profile.pixel) {
       plate(c, r, color: const Color(0xFF9A9E9D), radius: 9);
       c.drawRRect(
@@ -561,7 +555,7 @@ class ModelArtwork {
     }
     label(
       c,
-      inside ? 'REAR COVER' : 'SAMSUNG',
+      inside ? profile.modelName : profile.manufacturer.toUpperCase(),
       r.center + Offset(0, r.height * .22),
       12,
       Colors.white30,

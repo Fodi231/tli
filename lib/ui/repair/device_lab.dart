@@ -9,6 +9,7 @@ import '../../core/market/device_catalog.dart';
 import '../../core/market/market_strings.dart';
 import '../../core/repair/repair_session.dart';
 import '../../core/repair/device_runtime.dart';
+import 'photo_anatomy.dart';
 
 Future<void> showDeviceLab(
   BuildContext context,
@@ -45,6 +46,7 @@ class _DeviceLabState extends State<DeviceLab> {
   late final TextEditingController notes;
   final GlobalKey _liveScreen = GlobalKey();
   ui.Image? _foldImage;
+  PhotoAnatomy? _modelArt;
   DeviceRuntime get r => widget.session.runtime;
   DeviceSpec get spec => deviceFor(widget.session.device) ?? deviceCatalog[2];
   bool get apple => spec.apple;
@@ -76,6 +78,9 @@ class _DeviceLabState extends State<DeviceLab> {
       batteryConnected: batteryConnected,
     );
     notes = TextEditingController(text: r.note);
+    PhotoAnatomy.load(spec.id).then((art) {
+      if (mounted) setState(() => _modelArt = art);
+    });
     timer = Timer.periodic(const Duration(milliseconds: 100), (t) {
       final before = r.power;
       final transitioned = r.advance(
@@ -277,20 +282,24 @@ class _DeviceLabState extends State<DeviceLab> {
                                                       BorderRadius.circular(
                                                         apple ? 35 : 24,
                                                       ),
-                                                  gradient:
-                                                      const LinearGradient(
-                                                        begin:
-                                                            Alignment.topLeft,
-                                                        end:
-                                                            Alignment
-                                                                .bottomRight,
-                                                        colors: [
-                                                          Color(0xFFD8DDE2),
-                                                          Color(0xFF485260),
-                                                          Color(0xFF9DA7AF),
-                                                          Color(0xFF303C49),
-                                                        ],
-                                                      ),
+                                                  gradient: LinearGradient(
+                                                    begin: Alignment.topLeft,
+                                                    end: Alignment.bottomRight,
+                                                    colors:
+                                                        spec.brand == 'HUAWEI'
+                                                            ? const [
+                                                              Color(0xFFE2CC95),
+                                                              Color(0xFF6C5230),
+                                                              Color(0xFFD0AF6E),
+                                                              Color(0xFF493920),
+                                                            ]
+                                                            : const [
+                                                              Color(0xFFD8DDE2),
+                                                              Color(0xFF485260),
+                                                              Color(0xFF9DA7AF),
+                                                              Color(0xFF303C49),
+                                                            ],
+                                                  ),
                                                   boxShadow: const [
                                                     BoxShadow(
                                                       color: Colors.black87,
@@ -404,6 +413,8 @@ class _DeviceLabState extends State<DeviceLab> {
                                                                     panel,
                                                                     spec.panels,
                                                                     _foldImage,
+                                                                    _modelArt,
+                                                                    spec.brand,
                                                                   ),
                                                             ),
                                                           ),
@@ -1964,6 +1975,18 @@ class _DeviceLabState extends State<DeviceLab> {
             ),
       ),
     ListTile(
+      leading: const Icon(Icons.charging_station_outlined),
+      title: Text(
+        spec.magSafe
+            ? 'MagSafe / Qi'
+            : tr(
+              'Беспроводная зарядка · без магнитного кольца',
+              'Wireless charging · no magnetic ring',
+              'Бездротове заряджання · без магнітного кільця',
+            ),
+      ),
+    ),
+    ListTile(
       leading: const Icon(Icons.memory),
       title: Text(spec.chip),
       subtitle: Text(spec.storage),
@@ -1986,7 +2009,16 @@ class _FoldMotion extends CustomPainter {
   final double stage, panel;
   final int panels;
   final ui.Image? image;
-  _FoldMotion(this.stage, this.panel, this.panels, this.image);
+  final PhotoAnatomy? modelArt;
+  final String brand;
+  _FoldMotion(
+    this.stage,
+    this.panel,
+    this.panels,
+    this.image,
+    this.modelArt,
+    this.brand,
+  );
   @override
   void paint(Canvas c, Size s) {
     final i = stage.floor() + 1;
@@ -2049,12 +2081,42 @@ class _FoldMotion extends CustomPainter {
       );
       c.restore();
     }
+    if (math.cos(angle) < 0 && modelArt != null && (end - hinge).abs() > 2) {
+      final atlas = modelArt!;
+      final rect = atlas.spec.sprites['rear_cover']!;
+      final left = rect.left + rect.width * (i.clamp(0, panels - 1)) / panels;
+      final right = left + rect.width / panels;
+      final uv = [
+        Offset(left * atlas.image.width, rect.top * atlas.image.height),
+        Offset(right * atlas.image.width, rect.top * atlas.image.height),
+        Offset(right * atlas.image.width, rect.bottom * atlas.image.height),
+        Offset(left * atlas.image.width, rect.bottom * atlas.image.height),
+      ];
+      c.save();
+      c.clipPath(path);
+      c.drawVertices(
+        ui.Vertices(ui.VertexMode.triangleFan, pts, textureCoordinates: uv),
+        BlendMode.srcOver,
+        Paint()
+          ..shader = ui.ImageShader(
+            atlas.image,
+            TileMode.clamp,
+            TileMode.clamp,
+            Matrix4.identity().storage,
+          )
+          ..filterQuality = FilterQuality.high,
+      );
+      c.restore();
+    }
     c.drawPath(
       path,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3
-        ..color = const Color(0xFFB0BBC4),
+        ..color =
+            brand == 'HUAWEI'
+                ? const Color(0xFFC4A26A)
+                : const Color(0xFFB0BBC4),
     );
     c.drawLine(
       Offset(hinge, 3),
@@ -2086,7 +2148,7 @@ class _FoldMotion extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _FoldMotion old) =>
-      stage != old.stage || image != old.image;
+      stage != old.stage || image != old.image || modelArt != old.modelArt;
 }
 
 class _AppleMark extends CustomPainter {

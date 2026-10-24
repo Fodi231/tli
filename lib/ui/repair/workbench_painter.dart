@@ -7,6 +7,7 @@ import '../../core/repair/repair_strings.dart';
 import 'workbench_geometry.dart';
 import 'model_artwork.dart';
 import '../../core/repair/device_profile.dart';
+import '../../core/market/device_catalog.dart';
 import 'photo_anatomy.dart';
 
 const benchBlue = Color(0xFF57C5FF);
@@ -22,6 +23,12 @@ class WorkbenchPainter extends CustomPainter {
   final String? dragTarget, holdingTarget;
   final Offset? dragPosition;
   final PhotoAnatomy? photo;
+  final double flipProgress;
+  final bool? flipFromRear;
+  bool get renderRear =>
+      flipProgress < .5 && flipFromRear != null
+          ? flipFromRear!
+          : session.rearSideUp;
   WorkbenchPainter({
     required this.geometry,
     required this.session,
@@ -34,6 +41,8 @@ class WorkbenchPainter extends CustomPainter {
     this.dragTarget,
     this.dragPosition,
     this.photo,
+    this.flipProgress = 1,
+    this.flipFromRear,
   });
 
   DeviceProfile get profile => profileFor(session.device);
@@ -128,6 +137,17 @@ class WorkbenchPainter extends CustomPainter {
       centered: true,
       spacing: 1.5,
     );
+    if (profile.rearAccess && s.isOpen && s.hints) {
+      _text(
+        canvas,
+        deviceFor(profile.id)!.magSafe ? 'MagSafe / NFC' : 'WIRELESS / NFC',
+        Offset(g.parkedDisplay.center.dx, g.parkedDisplay.bottom + 36),
+        9,
+        Colors.white38,
+        centered: true,
+        spacing: .4,
+      );
+    }
     _body(canvas);
     final noScreen =
         !profile.rearAccess && s.service == 'display' && s.partRemoved;
@@ -168,7 +188,7 @@ class WorkbenchPainter extends CustomPainter {
         final id = 'new_aux_$i';
         if (!s.auxiliaryInstalled(i) && dragTarget != id) {
           final rect = g.rect(id, s).deflate(4);
-          if (photo != null && profile.segments == 1) {
+          if (photo != null) {
             photo!.part(canvas, profile, 'aux_battery_$i', rect);
           } else {
             art.part(canvas, 'battery', rect, fresh: true);
@@ -193,7 +213,7 @@ class WorkbenchPainter extends CustomPainter {
             tray.width / count - 5,
             tray.height - 20,
           );
-          if (photo != null && profile.segments == 1) {
+          if (photo != null) {
             photo!.part(canvas, profile, id, rect);
           } else {
             art.part(canvas, 'battery', rect);
@@ -252,13 +272,13 @@ class WorkbenchPainter extends CustomPainter {
         );
       } else if (dragTarget!.startsWith('new_aux_')) {
         final id = 'aux_battery_${dragTarget!.split('_').last}';
-        if (photo != null && profile.segments == 1) {
+        if (photo != null) {
           photo!.part(canvas, profile, id, r);
         } else {
           art.part(canvas, 'battery', r, fresh: true);
         }
       } else if (dragTarget!.startsWith('aux_battery_')) {
-        if (photo != null && profile.segments == 1) {
+        if (photo != null) {
           photo!.part(canvas, profile, dragTarget!, r);
         } else {
           art.part(canvas, 'battery', r, fresh: s.newPartInstalled);
@@ -302,7 +322,7 @@ class WorkbenchPainter extends CustomPainter {
     _text(
       canvas,
       device,
-      Offset(g.phone.center.dx, g.phone.bottom + 32),
+      Offset(g.visiblePhone(s).center.dx, g.phone.bottom + 32),
       15,
       Colors.white70,
       centered: true,
@@ -340,11 +360,39 @@ class WorkbenchPainter extends CustomPainter {
   }
 
   void _body(Canvas c) {
+    c.save();
+    if (flipProgress < 1) {
+      final scale = math.cos(math.pi * flipProgress).abs().clamp(.025, 1.0);
+      c.translate(geometry.visiblePhone(session).center.dx, 0);
+      c.scale(scale, 1);
+      c.translate(-geometry.visiblePhone(session).center.dx, 0);
+    }
+    _paintBody(c);
+    c.restore();
+  }
+
+  void _paintBody(Canvas c) {
     final s = session;
     final g = geometry;
-    final p = g.phone;
+    final p = g.visiblePhone(s);
     final android = !device.toLowerCase().contains('iphone');
-    final radius = android ? 24.0 : 36.0;
+    final radius =
+        profile.segments > 1
+            ? 12.0
+            : profile.id == 'iphone11'
+            ? 35.0
+            : android
+            ? 24.0
+            : 29.0;
+    final tint = switch (profile.id) {
+      'matext' => const Color(0xFFC8A160),
+      'iphone12' || 'iphone13' || 'galaxyfold7' => const Color(0xFF3D6E9B),
+      'galaxys22' => const Color(0xFF4C6960),
+      'galaxys23' => const Color(0xFFD9D5C9),
+      'iphone15pro' => const Color(0xFF99968F),
+      'iphone11' || 'pixel7' || 'iphoneduo' => const Color(0xFF545963),
+      _ => const Color(0xFF7D8792),
+    };
     c.drawRRect(
       RRect.fromRectAndRadius(
         p.shift(const Offset(9, 18)),
@@ -357,14 +405,14 @@ class WorkbenchPainter extends CustomPainter {
     c.drawRRect(
       RRect.fromRectAndRadius(p.inflate(4), Radius.circular(radius)),
       Paint()
-        ..shader = const LinearGradient(
+        ..shader = LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFFB7BCC6),
-            Color(0xFF454B57),
-            Color(0xFF9C9FA8),
-            Color(0xFF343944),
+            Color.lerp(tint, Colors.white, .5)!,
+            Color.lerp(tint, Colors.black, .4)!,
+            tint,
+            Color.lerp(tint, Colors.black, .5)!,
           ],
         ).createShader(p),
     );
@@ -384,7 +432,7 @@ class WorkbenchPainter extends CustomPainter {
       ),
       Paint()..color = const Color(0xFFB0B6C3),
     );
-    if (!s.isOpen || s.frontFacing) {
+    if (!s.isOpen || (profile.rearAccess && !renderRear)) {
       if (dragTarget != 'screen' &&
           dragTarget != 'front_display' &&
           !(s.frontFacing && s.partRemoved)) {
@@ -437,7 +485,7 @@ class WorkbenchPainter extends CustomPainter {
         if (removed || dragTarget == id) {
           _emptyBatteryBay(c, r);
         } else {
-          if (photo != null && profile.segments == 1) {
+          if (photo != null) {
             photo!.part(c, profile, id, r);
           } else {
             art.part(c, 'battery', r, fresh: s.newPartInstalled);
@@ -559,10 +607,83 @@ class WorkbenchPainter extends CustomPainter {
     }
   }
 
+  void _surface(Canvas c, String type, Rect r) {
+    final atlas = photo!;
+    if (profile.id == 'matext' && type == 'rear_cover') {
+      // The generated texture's leather panels have unequal pixel widths;
+      // physical panels keep their verified equal width in the renderer.
+      const cuts = [0.0, .37, .70, 1.0];
+      final src = atlas.spec.sprites['rear_cover']!;
+      final count =
+          session.done('unfold')
+              ? 3
+              : (session.runtime.foldStage + 1).clamp(1, 3);
+      for (var i = 0; i < count; i++) {
+        final source = Rect.fromLTWH(
+          (src.left + src.width * cuts[i]) * atlas.image.width,
+          src.top * atlas.image.height,
+          src.width * (cuts[i + 1] - cuts[i]) * atlas.image.width,
+          src.height * atlas.image.height,
+        );
+        c.drawImageRect(
+          atlas.image,
+          source,
+          Rect.fromLTWH(
+            r.left + r.width * i / count,
+            r.top,
+            r.width / count,
+            r.height,
+          ),
+          Paint()..filterQuality = FilterQuality.high,
+        );
+      }
+      return;
+    }
+    if (profile.segments > 1 &&
+        !session.done('unfold') &&
+        session.runtime.foldStage < profile.segments - 1) {
+      var sourceType = type;
+      var first = 0;
+      final count = session.runtime.foldStage + 1;
+      if (type == 'front' && profile.id != 'matext' && count == 1) {
+        sourceType = 'rear_cover';
+        first = profile.segments - 1;
+      }
+      final src = atlas.spec.sprites[sourceType]!;
+      final slice = Rect.fromLTWH(
+        src.left + src.width * first / profile.segments,
+        src.top,
+        src.width * count / profile.segments,
+        src.height,
+      );
+      c.drawImageRect(
+        atlas.image,
+        Rect.fromLTWH(
+          slice.left * atlas.image.width,
+          slice.top * atlas.image.height,
+          slice.width * atlas.image.width,
+          slice.height * atlas.image.height,
+        ),
+        r,
+        Paint()..filterQuality = FilterQuality.high,
+      );
+    } else {
+      atlas.part(c, profile, type, r);
+    }
+  }
+
   void _screen(Canvas c, Rect r, {bool cracked = false}) {
     final s = session;
-    if (profile.rearAccess && !s.powered && !s.frontFacing) {
-      art.rearCover(c, r);
+    if (renderRear) {
+      if (photo?.spec.separateParts == true) {
+        _surface(c, 'rear_cover', r);
+      } else {
+        art.rearCover(c, r);
+      }
+      return;
+    }
+    if (photo?.spec.separateParts == true && !s.powered) {
+      _surface(c, 'front', r);
       return;
     }
     c.drawRRect(
@@ -708,6 +829,17 @@ class WorkbenchPainter extends CustomPainter {
     required bool fresh,
     bool cover = false,
   }) {
+    if (photo?.spec.separateParts == true) {
+      final aspect = profile.bodyWidth / 438;
+      final w = math.min(r.width, r.height * aspect);
+      final fitted = Rect.fromCenter(
+        center: r.center,
+        width: w,
+        height: w / aspect,
+      );
+      photo!.part(c, profile, cover ? 'cover_inside' : 'display_back', fitted);
+      return;
+    }
     if (cover) {
       art.rearCover(c, r, inside: true);
       return;
@@ -762,6 +894,7 @@ class WorkbenchPainter extends CustomPainter {
   }
 
   void _emptyBatteryBay(Canvas c, Rect r) {
+    if (photo?.spec.separateParts == true) return;
     art.plate(c, r, color: const Color(0xFF696E72), radius: 5);
     for (final x in [.18, .74]) {
       c.drawRRect(
@@ -790,6 +923,24 @@ class WorkbenchPainter extends CustomPainter {
 
   void _component(Canvas c, String type, Rect r, {required bool fresh}) {
     if (r.width <= 0 || r.height <= 0) return;
+    if (type == 'port' && photo?.spec.sprites['port'] != null) {
+      final sprite = photo!.spec.sprites['port']!;
+      final aspect =
+          sprite.width *
+          photo!.image.width /
+          (sprite.height * photo!.image.height);
+      final mounted =
+          (r.center - geometry.rect('port', session).center).distance < 1 ||
+          dragTarget == 'port';
+      final w = mounted ? r.width : math.min(r.width, r.height * aspect);
+      final h = w / aspect;
+      final dest =
+          mounted
+              ? Rect.fromLTWH(r.left, r.bottom - h, w, h)
+              : Rect.fromCenter(center: r.center, width: w, height: h);
+      photo!.part(c, profile, 'port', dest);
+      return;
+    }
     if (type != 'display') {
       final b =
           type == 'battery'
@@ -803,7 +954,7 @@ class WorkbenchPainter extends CustomPainter {
         width: w,
         height: w * b.h / b.w,
       );
-      if (photo != null && !(profile.segments > 1 && type == 'battery')) {
+      if (photo != null) {
         photo!.part(c, profile, type, fitted);
       } else {
         art.part(c, type, fitted, fresh: fresh);
@@ -812,22 +963,13 @@ class WorkbenchPainter extends CustomPainter {
     }
     switch (type) {
       case 'display':
-        final landscape = r.width > r.height;
-        final space = landscape ? Size(r.height, r.width) : r.size;
-        final w = math.min(space.width, space.height * .51);
-        c.save();
-        c.translate(r.center.dx, r.center.dy);
-        if (landscape) c.rotate(-math.pi / 2);
+        final aspect = profile.bodyWidth / 438;
+        final w = math.min(r.width, r.height * aspect);
         _displayBack(
           c,
-          Rect.fromCenter(
-            center: Offset.zero,
-            width: w,
-            height: math.min(space.height, w * 1.96),
-          ),
+          Rect.fromCenter(center: r.center, width: w, height: w / aspect),
           fresh: fresh,
         );
-        c.restore();
         break;
     }
   }

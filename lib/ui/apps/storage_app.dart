@@ -19,7 +19,13 @@ class StorageApp extends StatelessWidget {
       title: 'storage'.tr,
       child: ListView(
         children: [
-          Text('parts_stock'.tr, style: const TextStyle(color: C.sub, fontWeight: FontWeight.w600)),
+          Text(
+            'parts_stock'.tr,
+            style: TextStyle(
+              color: IosColors.of(context).secondary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(height: 6),
           Panel(
             child: Column(
@@ -32,7 +38,10 @@ class StorageApp extends StatelessWidget {
                         Icon(serviceIcon(c), color: C.accent, size: 20),
                         const SizedBox(width: 10),
                         Expanded(child: Text('part_$c'.tr)),
-                        Text('x${gs.parts[c] ?? 0}', style: const TextStyle(fontWeight: FontWeight.w700)),
+                        Text(
+                          'x${gs.parts[c] ?? 0}',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
                       ],
                     ),
                   ),
@@ -40,36 +49,86 @@ class StorageApp extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          Text('devices_stock'.tr, style: const TextStyle(color: C.sub, fontWeight: FontWeight.w600)),
+          Text(
+            'devices_stock'.tr,
+            style: TextStyle(
+              color: IosColors.of(context).secondary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(height: 6),
-          if (gs.stock.isEmpty) Panel(child: Text('empty'.tr, style: const TextStyle(color: C.sub))),
-          OutlinedButton.icon(onPressed: () => context.read<Shell>().open('market', arg: 2), icon: const Icon(Icons.storefront), label: Text(mt('Мои объявления и ремонт', 'My listings and repairs', 'Мої оголошення та ремонт'))),
+          if (gs.stock.isEmpty)
+            Panel(
+              child: Text(
+                'empty'.tr,
+                style: TextStyle(color: IosColors.of(context).secondary),
+              ),
+            ),
+          OutlinedButton.icon(
+            onPressed: () => context.read<Shell>().open('market', arg: 2),
+            icon: const Icon(Icons.storefront),
+            label: Text(
+              mt(
+                'Мои объявления и ремонт',
+                'My listings and repairs',
+                'Мої оголошення та ремонт',
+              ),
+            ),
+          ),
           for (final it in gs.stock)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Panel(
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.phone_iphone, color: C.accent),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(it.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                          Text('${'paid'.tr} ${money(it.cost)}', style: const TextStyle(color: C.sub, fontSize: 12)),
-                          Text('${'market_value'.tr} ${money(it.resaleValue)}', style: const TextStyle(color: C.sub, fontSize: 12)),
-                        ],
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.phone_iphone_rounded,
+                          color: IosColors.of(context).blue,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            it.name,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      '${'paid'.tr} ${money(it.cost)}',
+                      style: TextStyle(
+                        color: IosColors.of(context).secondary,
+                        fontSize: 12,
                       ),
                     ),
-                    FilledButton(
-                      style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
-                      onPressed: () {
-                        final g = context.read<GameState>();
-                        final d = g.sellDealFor(it) ?? g.spawnDeal('sell', item: it);
-                        context.read<Shell>().open('messages', arg: d.id);
-                      },
-                      child: Text('find_buyer'.tr),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${'market_value'.tr} ${money(it.resaleValue)}',
+                      style: TextStyle(
+                        color: IosColors.of(context).secondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: () {
+                          final g = context.read<GameState>();
+                          final d =
+                              g.sellDealFor(it) ??
+                              g.spawnDeal('sell', item: it);
+                          context.read<Shell>().open('messages', arg: d.id);
+                        },
+                        child: Text('find_buyer'.tr),
+                      ),
                     ),
                   ],
                 ),

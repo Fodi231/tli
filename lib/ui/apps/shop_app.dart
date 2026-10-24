@@ -38,7 +38,7 @@ class _ShopAppState extends State<ShopApp> {
               prefixIcon: const Icon(Icons.search),
               hintText: 'search_parts'.tr,
               filled: true,
-              fillColor: C.card,
+              fillColor: IosColors.of(context).surface,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide.none,
@@ -55,98 +55,108 @@ class _ShopAppState extends State<ShopApp> {
           ),
           const SizedBox(height: 8),
           Expanded(
-            child: ListView.separated(
-              itemCount: list.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (_, i) {
-                final p = list[i];
-                final have = gs.parts[p.cat] ?? 0;
-                return Panel(
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: C.card2,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(serviceIcon(p.cat), color: C.accent),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'part_${p.cat}'.tr,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
+            child:
+                list.isEmpty
+                    ? Empty('empty'.tr)
+                    : ListView.separated(
+                      itemCount: list.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (_, i) {
+                        final p = list[i];
+                        final have = gs.parts[p.cat] ?? 0;
+                        return Panel(
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: IosColors.of(context).inset,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(
+                                  serviceIcon(p.cat),
+                                  color: IosColors.of(context).blue,
+                                ),
                               ),
-                            ),
-                            Text(
-                              '${'for_device'.tr} ${p.device}',
-                              style: const TextStyle(
-                                color: C.sub,
-                                fontSize: 12,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'part_${p.cat}'.tr,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    Text(
+                                      '${'for_device'.tr} ${p.device}',
+                                      style: TextStyle(
+                                        color: IosColors.of(context).secondary,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    Wrap(
+                                      crossAxisAlignment:
+                                          WrapCrossAlignment.center,
+                                      children: [
+                                        Text(
+                                          money(p.price),
+                                          style: TextStyle(
+                                            color: IosColors.of(context).green,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        const Icon(
+                                          Icons.star,
+                                          size: 14,
+                                          color: C.orange,
+                                        ),
+                                        Text(
+                                          p.rating.toString(),
+                                          style: const TextStyle(fontSize: 12),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                            Row(
-                              children: [
-                                Text(
-                                  money(p.price),
-                                  style: const TextStyle(
-                                    color: C.green,
-                                    fontWeight: FontWeight.w700,
+                              Column(
+                                children: [
+                                  FilledButton(
+                                    style: FilledButton.styleFrom(
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                    onPressed: () {
+                                      final ok = context
+                                          .read<GameState>()
+                                          .buyPart(p);
+                                      toast(
+                                        context,
+                                        ok
+                                            ? '${'bought'.tr}: ${'part_${p.cat}'.tr}'
+                                            : 'no_money'.tr,
+                                      );
+                                    },
+                                    child: Text('buy'.tr),
                                   ),
-                                ),
-                                const SizedBox(width: 8),
-                                const Icon(
-                                  Icons.star,
-                                  size: 14,
-                                  color: C.orange,
-                                ),
-                                Text(
-                                  p.rating.toString(),
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      Column(
-                        children: [
-                          FilledButton(
-                            style: FilledButton.styleFrom(
-                              visualDensity: VisualDensity.compact,
-                            ),
-                            onPressed: () {
-                              final ok = context.read<GameState>().buyPart(p);
-                              toast(
-                                context,
-                                ok
-                                    ? '${'bought'.tr}: ${'part_${p.cat}'.tr}'
-                                    : 'no_money'.tr,
-                              );
-                            },
-                            child: Text('buy'.tr),
-                          ),
-                          if (have > 0)
-                            Text(
-                              'x$have',
-                              style: const TextStyle(
-                                color: C.sub,
-                                fontSize: 11,
+                                  if (have > 0)
+                                    Text(
+                                      'x$have',
+                                      style: TextStyle(
+                                        color: IosColors.of(context).secondary,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                ],
                               ),
-                            ),
-                        ],
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
           ),
         ],
       ),

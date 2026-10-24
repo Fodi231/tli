@@ -30,14 +30,38 @@ class _Prov {
 }
 
 const _esri = 'https://server.arcgisonline.com/ArcGIS/rest/services';
-const _esriDark = _Prov('esri_dark', '$_esri/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', 16, 'dark', 'Esri, HERE, Garmin');
-const _osm = _Prov('osm', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', 19, 'invert', '© OpenStreetMap contributors');
-const _esriStreet = _Prov('esri_street', '$_esri/World_Street_Map/MapServer/tile/{z}/{y}/{x}', 19, 'invert', 'Esri, HERE, Garmin');
-const _esriSat = _Prov('esri_sat', '$_esri/World_Imagery/MapServer/tile/{z}/{y}/{x}', 18, 'natural', 'Esri, Maxar, Earthstar Geographics');
+const _esriDark = _Prov(
+  'esri_dark',
+  '$_esri/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+  16,
+  'dark',
+  'Esri, HERE, Garmin',
+);
+const _osm = _Prov(
+  'osm',
+  'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  19,
+  'invert',
+  '© OpenStreetMap contributors',
+);
+const _esriStreet = _Prov(
+  'esri_street',
+  '$_esri/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+  19,
+  'invert',
+  'Esri, HERE, Garmin',
+);
+const _esriSat = _Prov(
+  'esri_sat',
+  '$_esri/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  18,
+  'natural',
+  'Esri, Maxar, Earthstar Geographics',
+);
 
 /// Tile sources per map style (0 auto, 1 streets, 2 satellite, 3 offline).
 /// When one source keeps failing the next one in the chain is used.
-const List<List<_Prov>> _chains = [
+List<List<_Prov>> _chains = [
   [_esriDark, _osm, _esriStreet],
   [_osm, _esriStreet, _esriDark],
   [_esriSat, _esriStreet, _osm],
@@ -76,7 +100,14 @@ class _WorldLayer extends StatelessWidget {
     final cam = MapCamera.of(context);
     return IgnorePointer(
       child: SizedBox.expand(
-        child: CustomPaint(painter: _WorldPainter(geo, cam.zoom, cam.pixelOrigin.x, cam.pixelOrigin.y)),
+        child: CustomPaint(
+          painter: _WorldPainter(
+            geo,
+            cam.zoom,
+            cam.pixelOrigin.x,
+            cam.pixelOrigin.y,
+          ),
+        ),
       ),
     );
   }
@@ -88,22 +119,30 @@ class _WorldPainter extends CustomPainter {
   _WorldPainter(this.geo, this.zoom, this.ox, this.oy);
 
   static final Paint _land = Paint()..color = const Color(0xFF1B2540);
-  static final Paint _border = Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = 0.8
-    ..strokeJoin = StrokeJoin.round
-    ..color = const Color(0xFF3A4A78);
+  static final Paint _border =
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.8
+        ..strokeJoin = StrokeJoin.round
+        ..color = const Color(0xFF3A4A78);
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (zoom > 11) return; // the tiles cover it; huge coordinates also confuse the rasterizer
+    if (zoom > 11) {
+      return; // the tiles cover it; huge coordinates also confuse the rasterizer
+    }
     final w = 256.0 * math.pow(2, zoom);
     for (var ci = 0; ci < geo.shapes.length; ci++) {
       Path? path;
       for (final r in geo.shapes[ci]) {
         final x0 = r.minX * w - ox, x1 = r.maxX * w - ox;
         final y0 = r.minY * w - oy, y1 = r.maxY * w - oy;
-        if (x1 < -10 || x0 > size.width + 10 || y1 < -10 || y0 > size.height + 10) continue;
+        if (x1 < -10 ||
+            x0 > size.width + 10 ||
+            y1 < -10 ||
+            y0 > size.height + 10) {
+          continue;
+        }
         if (x1 - x0 < 0.8 && y1 - y0 < 0.8) continue; // specks
         path ??= Path()..fillType = PathFillType.evenOdd;
         final xy = r.xy;
@@ -133,7 +172,8 @@ class _WorldPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_WorldPainter o) => o.zoom != zoom || o.ox != ox || o.oy != oy || o.geo != geo;
+  bool shouldRepaint(_WorldPainter o) =>
+      o.zoom != zoom || o.ox != ox || o.oy != oy || o.geo != geo;
 }
 
 /// Country and city names in the game language with collision avoidance:
@@ -142,7 +182,11 @@ class _LabelsLayer extends StatelessWidget {
   final GeoData geo;
   final String lang;
   final LabelHits hits;
-  const _LabelsLayer({required this.geo, required this.lang, required this.hits});
+  const _LabelsLayer({
+    required this.geo,
+    required this.lang,
+    required this.hits,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -150,7 +194,14 @@ class _LabelsLayer extends StatelessWidget {
     return IgnorePointer(
       child: SizedBox.expand(
         child: CustomPaint(
-          painter: _LabelsPainter(geo, geoLangIndex(lang), cam.zoom, cam.pixelOrigin.x, cam.pixelOrigin.y, hits),
+          painter: _LabelsPainter(
+            geo,
+            geoLangIndex(lang),
+            cam.zoom,
+            cam.pixelOrigin.x,
+            cam.pixelOrigin.y,
+            hits,
+          ),
         ),
       ),
     );
@@ -172,26 +223,43 @@ class _LabelsPainter extends CustomPainter {
 
   static final Map<String, _Lbl> _cache = {};
 
-  static _Lbl _text(String key, String text, double size, FontWeight weight, Color color, double spacing) {
+  static _Lbl _text(
+    String key,
+    String text,
+    double size,
+    FontWeight weight,
+    Color color,
+    double spacing,
+  ) {
     final hit = _cache[key];
     if (hit != null) return hit;
     if (_cache.length > 3000) _cache.clear();
     TextPainter mk(TextStyle st) => TextPainter(
-          text: TextSpan(text: text, style: st),
-          textDirection: TextDirection.ltr,
-          maxLines: 1,
-        )..layout();
-    final fill = mk(TextStyle(fontSize: size, fontWeight: weight, color: color, letterSpacing: spacing));
-    final halo = mk(TextStyle(
-      fontSize: size,
-      fontWeight: weight,
-      letterSpacing: spacing,
-      foreground: Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3
-        ..strokeJoin = StrokeJoin.round
-        ..color = const Color(0xE6050A18),
-    ));
+      text: TextSpan(text: text, style: st),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout();
+    final fill = mk(
+      TextStyle(
+        fontSize: size,
+        fontWeight: weight,
+        color: color,
+        letterSpacing: spacing,
+      ),
+    );
+    final halo = mk(
+      TextStyle(
+        fontSize: size,
+        fontWeight: weight,
+        letterSpacing: spacing,
+        foreground:
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 3
+              ..strokeJoin = StrokeJoin.round
+              ..color = const Color(0xE6050A18),
+      ),
+    );
     return _cache[key] = _Lbl(fill, halo, fill.width, fill.height);
   }
 
@@ -220,12 +288,20 @@ class _LabelsPainter extends CustomPainter {
         if (placed.length > 450) return;
 
         final size0 = p.rank <= 1 ? 14.5 : (p.rank <= 3 ? 13.0 : 12.0);
-        final weight = p.rank <= 1 ? FontWeight.w700 : (p.rank <= 3 ? FontWeight.w600 : FontWeight.w500);
+        final weight =
+            p.rank <= 1
+                ? FontWeight.w700
+                : (p.rank <= 3 ? FontWeight.w600 : FontWeight.w500);
         final lb = _text('p$i|$li', p.name(li), size0, weight, Colors.white, 0);
         final r = p.cap == 1 ? 3.6 : 2.6;
         // label to the right of the dot, otherwise to the left
         var lx = cx + r + 3;
-        var rect = Rect.fromLTWH(cx - r - 1, cy - lb.h / 2, (lx - cx) + lb.w + r, lb.h);
+        var rect = Rect.fromLTWH(
+          cx - r - 1,
+          cy - lb.h / 2,
+          (lx - cx) + lb.w + r,
+          lb.h,
+        );
         if (!_free(placed, rect)) {
           lx = cx - r - 3 - lb.w;
           rect = Rect.fromLTWH(lx - 1, cy - lb.h / 2, (cx - lx) + r + 2, lb.h);
@@ -237,8 +313,18 @@ class _LabelsPainter extends CustomPainter {
 
         final c = Offset(cx, cy);
         canvas.drawCircle(c, r + 1.6, Paint()..color = const Color(0xE6050A18));
-        canvas.drawCircle(c, r, Paint()..color = p.cap == 1 ? const Color(0xFFFFD166) : Colors.white);
-        if (p.cap == 1) canvas.drawCircle(c, r - 1.8, Paint()..color = const Color(0xFF0B1426));
+        canvas.drawCircle(
+          c,
+          r,
+          Paint()..color = p.cap == 1 ? const Color(0xFFFFD166) : Colors.white,
+        );
+        if (p.cap == 1) {
+          canvas.drawCircle(
+            c,
+            r - 1.8,
+            Paint()..color = const Color(0xFF0B1426),
+          );
+        }
         final o = Offset(lx, cy - lb.h / 2);
         lb.halo.paint(canvas, o);
         lb.fill.paint(canvas, o);
@@ -255,8 +341,19 @@ class _LabelsPainter extends CustomPainter {
       final cx = c.mx * w - ox, cy = c.my * w - oy;
       if (!view.contains(Offset(cx, cy))) continue;
       final big = c.rank <= 1;
-      final lb = _text('c$i|$li', c.name(li).toUpperCase(), big ? 13.5 : 11.5, FontWeight.w600, const Color(0xFFB8C4E6), 1.6);
-      final rect = Rect.fromCenter(center: Offset(cx, cy), width: lb.w, height: lb.h);
+      final lb = _text(
+        'c$i|$li',
+        c.name(li).toUpperCase(),
+        big ? 13.5 : 11.5,
+        FontWeight.w600,
+        const Color(0xFFB8C4E6),
+        1.6,
+      );
+      final rect = Rect.fromCenter(
+        center: Offset(cx, cy),
+        width: lb.w,
+        height: lb.h,
+      );
       if (!_free(placed, rect)) continue;
       placed.add(rect.inflate(4));
       final o = Offset(cx - lb.w / 2, cy - lb.h / 2);
@@ -303,11 +400,13 @@ class _MapAppState extends State<MapApp> {
   @override
   void initState() {
     super.initState();
-    GeoData.ensure().then((g) {
-      if (mounted) setState(() => _geo = g);
-    }).catchError((Object e) {
-      if (mounted) setState(() => _geoError = e.toString());
-    });
+    GeoData.ensure()
+        .then((g) {
+          if (mounted) setState(() => _geo = g);
+        })
+        .catchError((Object e) {
+          if (mounted) setState(() => _geoError = e.toString());
+        });
   }
 
   @override
@@ -316,7 +415,10 @@ class _MapAppState extends State<MapApp> {
     super.dispose();
   }
 
-  List<_Prov> _chain(int style) => _chains[style.clamp(0, _chains.length - 1).toInt()];
+  List<_Prov> _chain(int style) =>
+      _chains[style == 0 && Theme.of(context).brightness == Brightness.light
+          ? 1
+          : style.clamp(0, _chains.length - 1).toInt()];
 
   void _tileError(Object error, int style) {
     final now = DateTime.now();
@@ -324,21 +426,30 @@ class _MapAppState extends State<MapApp> {
     _lastErr = now;
     _errs++;
     if (_errs == 1) {
-      AppLog.I.warn('map', 'плитка карты не загрузилась: ${error.toString().split('\n').first}');
+      AppLog.I.warn(
+        'map',
+        'плитка карты не загрузилась: ${error.toString().split('\n').first}',
+      );
     }
     if (_errs < 8) return;
     final chain = _chain(style);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (_prov < chain.length - 1) {
-        AppLog.I.warn('map', 'источник ${chain[_prov].id} не отвечает, переключаюсь на ${chain[_prov + 1].id}');
+        AppLog.I.warn(
+          'map',
+          'источник ${chain[_prov].id} не отвечает, переключаюсь на ${chain[_prov + 1].id}',
+        );
         setState(() {
           _prov++;
           _errs = 0;
           _gen++;
         });
       } else if (!_down) {
-        AppLog.I.error('map', 'ни один сервер карты не отвечает — работает офлайн-карта');
+        AppLog.I.error(
+          'map',
+          'ни один сервер карты не отвечает — работает офлайн-карта',
+        );
         setState(() => _down = true);
         _downTimer?.cancel();
         _downTimer = Timer(const Duration(seconds: 20), () {
@@ -359,13 +470,16 @@ class _MapAppState extends State<MapApp> {
   }
 
   NetworkTileProvider _providerFor(String key) => _providers.putIfAbsent(
-        key,
-        () => NetworkTileProvider(httpClient: LimitedClient.shared),
-      );
+    key,
+    () => NetworkTileProvider(httpClient: LimitedClient.shared),
+  );
 
   void _zoomBy(double d) {
     final cam = controller.camera;
-    controller.move(cam.center, (cam.zoom + d).clamp(_minZoom, 18.0).toDouble());
+    controller.move(
+      cam.center,
+      (cam.zoom + d).clamp(_minZoom, 18.0).toDouble(),
+    );
   }
 
   void _move(GameState gs, LatLng p) {
@@ -374,7 +488,10 @@ class _MapAppState extends State<MapApp> {
     if (fare < 0) {
       toast(context, 'no_money'.tr);
     } else {
-      toast(context, '${'moved'.tr} ${km.toStringAsFixed(1)} km · ${'fare'.tr} ${money(fare)}');
+      toast(
+        context,
+        '${'moved'.tr} ${km.toStringAsFixed(1)} km · ${'fare'.tr} ${money(fare)}',
+      );
     }
   }
 
@@ -392,21 +509,39 @@ class _MapAppState extends State<MapApp> {
     _move(gs, p);
   }
 
-  City _cityOf(int index, GeoPlace p) =>
-      City('g$index', [p.names[1].isEmpty ? p.names[0] : p.names[1], p.names[0], p.names[2].isEmpty ? p.names[0] : p.names[2]], p.lat, p.lng, City.approxTemp(p.lat));
+  City _cityOf(int index, GeoPlace p) => City(
+    'g$index',
+    [
+      p.names[1].isEmpty ? p.names[0] : p.names[1],
+      p.names[0],
+      p.names[2].isEmpty ? p.names[0] : p.names[2],
+    ],
+    p.lat,
+    p.lng,
+    City.approxTemp(p.lat),
+  );
 
   void _placeSheet(GeoData geo, GeoPlace p) {
     final index = geo.places.indexOf(p);
     final city = _cityOf(index, p);
     showModalBottomSheet(
       context: context,
-      backgroundColor: C.card,
+      backgroundColor: IosColors.of(context).surface,
       constraints: const BoxConstraints(maxWidth: 560),
       builder: (ctx) {
         final gs = ctx.watch<GameState>();
         final cost = gs.flightCost(p.lat, p.lng);
-        final here = const Distance().as(LengthUnit.Kilometer, LatLng(gs.city.lat, gs.city.lng), LatLng(p.lat, p.lng)) < 25;
-        final country = p.country >= 0 && p.country < geo.countries.length ? geo.countries[p.country].name(geoLangIndex(gs.lang)) : '';
+        final here =
+            const Distance().as(
+              LengthUnit.Kilometer,
+              LatLng(gs.city.lat, gs.city.lng),
+              LatLng(p.lat, p.lng),
+            ) <
+            25;
+        final country =
+            p.country >= 0 && p.country < geo.countries.length
+                ? geo.countries[p.country].name(geoLangIndex(gs.lang))
+                : '';
         final km = gs.distanceKm(p.lat, p.lng);
         return Padding(
           padding: const EdgeInsets.all(16),
@@ -414,34 +549,72 @@ class _MapAppState extends State<MapApp> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(children: [
-                if (p.cap == 1) const Padding(padding: EdgeInsets.only(right: 6), child: Icon(Icons.star, color: Color(0xFFFFD166), size: 20)),
-                Expanded(child: Text(p.name(geoLangIndex(gs.lang)), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700))),
-              ]),
-              if (country.isNotEmpty) Text(country, style: const TextStyle(color: C.sub)),
+              Row(
+                children: [
+                  if (p.cap == 1)
+                    const Padding(
+                      padding: EdgeInsets.only(right: 6),
+                      child: Icon(
+                        Icons.star,
+                        color: Color(0xFFFFD166),
+                        size: 20,
+                      ),
+                    ),
+                  Expanded(
+                    child: Text(
+                      p.name(geoLangIndex(gs.lang)),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (country.isNotEmpty)
+                Text(
+                  country,
+                  style: TextStyle(color: IosColors.of(context).secondary),
+                ),
               const SizedBox(height: 6),
               Text(
                 '${p.pop > 0 ? '${'population'.tr}: ${money(p.pop).replaceAll('\$', '')}  ·  ' : ''}${km.toStringAsFixed(0)} km',
-                style: const TextStyle(color: C.sub, fontSize: 13),
+                style: TextStyle(
+                  color: IosColors.of(context).secondary,
+                  fontSize: 13,
+                ),
               ),
               const SizedBox(height: 14),
               FilledButton.icon(
-                onPressed: here
-                    ? null
-                    : () {
-                        final ok = ctx.read<GameState>().flyToCity(city);
-                        Navigator.pop(ctx);
-                        if (ok) controller.move(LatLng(p.lat, p.lng), 11.5);
-                        toast(context, ok ? '${'flew'.tr} ${city.name(gs.lang)}' : 'no_money'.tr);
-                      },
+                onPressed:
+                    here
+                        ? null
+                        : () {
+                          final ok = ctx.read<GameState>().flyToCity(city);
+                          Navigator.pop(ctx);
+                          if (ok) controller.move(LatLng(p.lat, p.lng), 11.5);
+                          toast(
+                            context,
+                            ok
+                                ? '${'flew'.tr} ${city.name(gs.lang)}'
+                                : 'no_money'.tr,
+                          );
+                        },
                 icon: const Icon(Icons.flight_takeoff),
-                label: Text(here ? 'you_are_here'.tr : '${'fly_here'.tr} · ${money(cost)}'),
+                label: Text(
+                  here
+                      ? 'you_are_here'.tr
+                      : '${'fly_here'.tr} · ${money(cost)}',
+                ),
               ),
               const SizedBox(height: 6),
               TextButton(
                 onPressed: () {
                   Navigator.pop(ctx);
-                  controller.move(LatLng(p.lat, p.lng), math.max(controller.camera.zoom, 8));
+                  controller.move(
+                    LatLng(p.lat, p.lng),
+                    math.max(controller.camera.zoom, 8),
+                  );
                 },
                 child: Text('show_on_map'.tr),
               ),
@@ -456,25 +629,26 @@ class _MapAppState extends State<MapApp> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: C.card,
+      backgroundColor: IosColors.of(context).surface,
       constraints: const BoxConstraints(maxWidth: 560),
-      builder: (ctx) => _SearchSheet(
-        geo: geo,
-        onPick: (p) {
-          Navigator.pop(ctx);
-          controller.move(LatLng(p.lat, p.lng), 9);
-          Future.delayed(const Duration(milliseconds: 150), () {
-            if (mounted) _placeSheet(geo, p);
-          });
-        },
-      ),
+      builder:
+          (ctx) => _SearchSheet(
+            geo: geo,
+            onPick: (p) {
+              Navigator.pop(ctx);
+              controller.move(LatLng(p.lat, p.lng), 9);
+              Future.delayed(const Duration(milliseconds: 150), () {
+                if (mounted) _placeSheet(geo, p);
+              });
+            },
+          ),
     );
   }
 
   void _orderSheet(Order o) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: C.card,
+      backgroundColor: IosColors.of(context).surface,
       constraints: const BoxConstraints(maxWidth: 560),
       builder: (ctx) {
         final gs = ctx.watch<GameState>();
@@ -485,10 +659,26 @@ class _MapAppState extends State<MapApp> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(s.nameKey.tr, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-              Text('${o.device} · ${gs.distanceKm(o.lat, o.lng).toStringAsFixed(1)} km', style: const TextStyle(color: C.sub)),
+              Text(
+                s.nameKey.tr,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Text(
+                '${o.device} · ${gs.distanceKm(o.lat, o.lng).toStringAsFixed(1)} km',
+                style: TextStyle(color: IosColors.of(context).secondary),
+              ),
               const SizedBox(height: 8),
-              Text(money(o.price), style: const TextStyle(color: C.green, fontSize: 20, fontWeight: FontWeight.w700)),
+              Text(
+                money(o.price),
+                style: TextStyle(
+                  color: IosColors.of(context).green,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               const SizedBox(height: 12),
               if (o.status == 'available')
                 FilledButton(
@@ -527,34 +717,43 @@ class _MapAppState extends State<MapApp> {
       keepBuffer: 3,
       panBuffer: 1,
       evictErrorTileStrategy: EvictErrorTileStrategy.notVisibleRespectMargin,
-      errorTileCallback: (tile, error, stackTrace) => _tileError(error, gs.mapStyle),
+      errorTileCallback:
+          (tile, error, stackTrace) => _tileError(error, gs.mapStyle),
     );
-    if (pr.mode == 'invert') layer = ColorFiltered(colorFilter: lightModeFilter, child: layer);
-    if (pr.mode == 'natural') layer = ThemeFilter(light: light, child: layer);
+    if (pr.mode == 'invert' && !light) {
+      layer = ColorFiltered(colorFilter: lightModeFilter, child: layer);
+    }
     return layer;
   }
 
   Widget _mapButton(IconData icon, String tip, VoidCallback? onTap) => Padding(
-        padding: const EdgeInsets.only(top: 8),
-        child: Tooltip(
-          message: tip,
-          child: Material(
-            color: C.card2,
-            borderRadius: BorderRadius.circular(12),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: onTap,
-              child: SizedBox(width: 42, height: 42, child: Icon(icon, color: Colors.white, size: 22)),
-            ),
+    padding: const EdgeInsets.only(top: 8),
+    child: Tooltip(
+      message: tip,
+      child: Material(
+        color: IosColors.of(context).inset,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: SizedBox(
+            width: 42,
+            height: 42,
+            child: Icon(icon, color: IosColors.of(context).blue, size: 22),
           ),
         ),
-      );
+      ),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
     final gs = context.watch<GameState>();
     final c = gs.city;
-    final light = isLightMode(gs.themeMode, MediaQuery.platformBrightnessOf(context));
+    final light = isLightMode(
+      gs.themeMode,
+      MediaQuery.platformBrightnessOf(context),
+    );
     if (_styleSeen != gs.mapStyle) {
       _styleSeen = gs.mapStyle;
       _prov = 0;
@@ -564,7 +763,10 @@ class _MapAppState extends State<MapApp> {
     }
     final geo = _geo;
     final chain = _chain(gs.mapStyle);
-    final credit = chain.isEmpty ? 'Natural Earth' : chain[_prov.clamp(0, chain.length - 1).toInt()].credit;
+    final credit =
+        chain.isEmpty
+            ? 'Natural Earth'
+            : chain[_prov.clamp(0, chain.length - 1).toInt()].credit;
 
     final markers = <Marker>[
       for (final o in gs.orders.where((o) => o.status != 'done'))
@@ -574,7 +776,12 @@ class _MapAppState extends State<MapApp> {
           height: 40,
           child: GestureDetector(
             onTap: () => _orderSheet(o),
-            child: Icon(Icons.build_circle, size: 34, color: o.status == 'active' ? C.green : C.orange),
+            child: Icon(
+              Icons.build_circle,
+              size: 34,
+              color:
+                  o.status == 'active' ? IosColors.of(context).green : C.orange,
+            ),
           ),
         ),
       for (final off in shopOffsets)
@@ -591,7 +798,11 @@ class _MapAppState extends State<MapApp> {
         point: gs.player,
         width: 44,
         height: 44,
-        child: const Icon(Icons.person_pin_circle, size: 40, color: Colors.redAccent),
+        child: const Icon(
+          Icons.person_pin_circle,
+          size: 40,
+          color: Colors.redAccent,
+        ),
       ),
     ];
 
@@ -602,38 +813,53 @@ class _MapAppState extends State<MapApp> {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(18),
-            child: LayoutBuilder(builder: (context, box) {
-              // The whole world must always cover the view (also on big PC windows).
-              final side = math.max(box.maxWidth, box.maxHeight);
-              _minZoom = math.max(1.0, (math.log(side / 256) / math.ln2 * 10).ceil() / 10);
-              return FlutterMap(
-                mapController: controller,
-                options: MapOptions(
-                  initialCenter: LatLng(c.lat, c.lng),
-                  initialZoom: math.max(11.5, _minZoom),
-                  minZoom: _minZoom,
-                  maxZoom: 18,
-                  backgroundColor: const Color(0xFF0B1426),
-                  interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
-                  cameraConstraint: CameraConstraint.contain(
-                    bounds: LatLngBounds(const LatLng(-85, -180), const LatLng(85, 180)),
+            child: LayoutBuilder(
+              builder: (context, box) {
+                // The whole world must always cover the view (also on big PC windows).
+                final side = math.max(box.maxWidth, box.maxHeight);
+                _minZoom = math.max(
+                  1.0,
+                  (math.log(side / 256) / math.ln2 * 10).ceil() / 10,
+                );
+                return FlutterMap(
+                  mapController: controller,
+                  options: MapOptions(
+                    initialCenter: LatLng(c.lat, c.lng),
+                    initialZoom: math.max(11.5, _minZoom),
+                    minZoom: _minZoom,
+                    maxZoom: 18,
+                    backgroundColor:
+                        light
+                            ? const Color(0xFFE1EAF2)
+                            : const Color(0xFF0B1426),
+                    interactionOptions: const InteractionOptions(
+                      flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                    ),
+                    cameraConstraint: CameraConstraint.contain(
+                      bounds: LatLngBounds(
+                        const LatLng(-85, -180),
+                        const LatLng(85, 180),
+                      ),
+                    ),
+                    onTap: (tp, p) => _onTap(gs, p),
                   ),
-                  onTap: (tp, p) => _onTap(gs, p),
-                ),
-                children: [
-                  if (geo != null) _WorldLayer(geo: geo),
-                  _tiles(gs, light),
-                  if (geo != null) _LabelsLayer(geo: geo, lang: gs.lang, hits: _hits),
-                  MarkerLayer(markers: markers),
-                  RichAttributionWidget(
-                    attributions: [
-                      TextSourceAttribution(credit),
-                      const TextSourceAttribution('Natural Earth'),
-                    ],
-                  ),
-                ],
-              );
-            }),
+                  children: [
+                    if (geo != null)
+                      ThemeFilter(light: light, child: _WorldLayer(geo: geo)),
+                    _tiles(gs, light),
+                    if (geo != null)
+                      _LabelsLayer(geo: geo, lang: gs.lang, hits: _hits),
+                    MarkerLayer(markers: markers),
+                    RichAttributionWidget(
+                      attributions: [
+                        TextSourceAttribution(credit),
+                        const TextSourceAttribution('Natural Earth'),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
           // --- top: city chips + search
           Positioned(
@@ -653,21 +879,43 @@ class _MapAppState extends State<MapApp> {
                             child: ChoiceChip(
                               label: Text(gs.customCity!.name(gs.lang)),
                               selected: true,
-                              onSelected: (_) => controller.move(LatLng(c.lat, c.lng), 11.5),
+                              onSelected:
+                                  (_) => controller.move(
+                                    LatLng(c.lat, c.lng),
+                                    11.5,
+                                  ),
                             ),
                           ),
                         for (var i = 0; i < cities.length; i++)
                           Padding(
                             padding: const EdgeInsets.only(right: 8),
                             child: ChoiceChip(
-                              label: Text(cities[i].name(gs.lang) +
-                                  (gs.customCity == null && i == gs.cityIndex ? '' : ' · ${money(gs.flightCost(cities[i].lat, cities[i].lng))}')),
-                              selected: gs.customCity == null && i == gs.cityIndex,
+                              label: Text(
+                                cities[i].name(gs.lang) +
+                                    (gs.customCity == null && i == gs.cityIndex
+                                        ? ''
+                                        : ' · ${money(gs.flightCost(cities[i].lat, cities[i].lng))}'),
+                              ),
+                              selected:
+                                  gs.customCity == null && i == gs.cityIndex,
                               onSelected: (_) {
-                                if (gs.customCity == null && i == gs.cityIndex) return;
+                                if (gs.customCity == null &&
+                                    i == gs.cityIndex) {
+                                  return;
+                                }
                                 final ok = context.read<GameState>().flyTo(i);
-                                if (ok) controller.move(LatLng(cities[i].lat, cities[i].lng), 11.5);
-                                toast(context, ok ? '${'flew'.tr} ${cities[i].name(gs.lang)}' : 'no_money'.tr);
+                                if (ok) {
+                                  controller.move(
+                                    LatLng(cities[i].lat, cities[i].lng),
+                                    11.5,
+                                  );
+                                }
+                                toast(
+                                  context,
+                                  ok
+                                      ? '${'flew'.tr} ${cities[i].name(gs.lang)}'
+                                      : 'no_money'.tr,
+                                );
                               },
                             ),
                           ),
@@ -677,11 +925,14 @@ class _MapAppState extends State<MapApp> {
                 ),
                 if (geo != null)
                   Material(
-                    color: C.card2,
+                    color: IosColors.of(context).inset,
                     borderRadius: BorderRadius.circular(20),
                     child: IconButton(
                       tooltip: 'search_city'.tr,
-                      icon: const Icon(Icons.search, color: Colors.white),
+                      icon: Icon(
+                        Icons.search,
+                        color: IosColors.of(context).blue,
+                      ),
                       onPressed: () => _searchSheet(geo),
                     ),
                   ),
@@ -696,10 +947,19 @@ class _MapAppState extends State<MapApp> {
             child: Column(
               children: [
                 if (geo == null && _geoError == null)
-                  _banner('loading_geo'.tr, C.card2, null)
+                  _banner('loading_geo'.tr, IosColors.of(context).inset, null)
                 else if (_geoError != null)
-                  _banner('${'geo_failed'.tr}: $_geoError', C.red.withValues(alpha: 0.85), null),
-                if (_down) _banner('tiles_down'.tr, C.red.withValues(alpha: 0.85), _reload),
+                  _banner(
+                    '${'geo_failed'.tr}: $_geoError',
+                    C.red.withValues(alpha: 0.85),
+                    null,
+                  ),
+                if (_down)
+                  _banner(
+                    'tiles_down'.tr,
+                    C.red.withValues(alpha: 0.85),
+                    _reload,
+                  ),
               ],
             ),
           ),
@@ -716,35 +976,54 @@ class _MapAppState extends State<MapApp> {
                   padding: const EdgeInsets.only(top: 8),
                   child: PopupMenuButton<int>(
                     tooltip: 'map_style'.tr,
-                    color: C.card2,
+                    color: IosColors.of(context).inset,
                     initialValue: gs.mapStyle,
                     onSelected: (v) => context.read<GameState>().setMapStyle(v),
-                    itemBuilder: (_) => [
-                      for (final e in const [
-                        [0, 'style_auto'],
-                        [1, 'style_streets'],
-                        [2, 'style_sat'],
-                        [3, 'style_offline'],
-                      ])
-                        PopupMenuItem<int>(
-                          value: e[0] as int,
-                          child: Row(children: [
-                            Icon(gs.mapStyle == e[0] ? Icons.radio_button_checked : Icons.radio_button_off, size: 18),
-                            const SizedBox(width: 8),
-                            Text((e[1] as String).tr),
-                          ]),
-                        ),
-                    ],
+                    itemBuilder:
+                        (_) => [
+                          for (final e in [
+                            [0, 'style_auto'],
+                            [1, 'style_streets'],
+                            [2, 'style_sat'],
+                            [3, 'style_offline'],
+                          ])
+                            PopupMenuItem<int>(
+                              value: e[0] as int,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    gs.mapStyle == e[0]
+                                        ? Icons.radio_button_checked
+                                        : Icons.radio_button_off,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text((e[1] as String).tr),
+                                ],
+                              ),
+                            ),
+                        ],
                     child: Container(
                       width: 42,
                       height: 42,
-                      decoration: BoxDecoration(color: C.card2, borderRadius: BorderRadius.circular(12)),
-                      child: const Icon(Icons.layers, color: Colors.white, size: 22),
+                      decoration: BoxDecoration(
+                        color: IosColors.of(context).inset,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.layers,
+                        color: IosColors.of(context).blue,
+                        size: 22,
+                      ),
                     ),
                   ),
                 ),
                 _mapButton(Icons.refresh, 'reload_map'.tr, _reload),
-                _mapButton(Icons.my_location, 'recenter'.tr, () => controller.move(gs.player, 12.5)),
+                _mapButton(
+                  Icons.my_location,
+                  'recenter'.tr,
+                  () => controller.move(gs.player, 12.5),
+                ),
               ],
             ),
           ),
@@ -754,20 +1033,23 @@ class _MapAppState extends State<MapApp> {
   }
 
   Widget _banner(String text, Color color, VoidCallback? retry) => Container(
-        margin: const EdgeInsets.only(bottom: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(child: Text(text, style: const TextStyle(fontSize: 12.5))),
-            if (retry != null) ...[
-              const SizedBox(width: 8),
-              InkWell(onTap: retry, child: const Icon(Icons.refresh, size: 18)),
-            ],
-          ],
-        ),
-      );
+    margin: const EdgeInsets.only(bottom: 6),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    decoration: BoxDecoration(
+      color: color,
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(child: Text(text, style: const TextStyle(fontSize: 12.5))),
+        if (retry != null) ...[
+          const SizedBox(width: 8),
+          InkWell(onTap: retry, child: const Icon(Icons.refresh, size: 18)),
+        ],
+      ],
+    ),
+  );
 }
 
 // ------------------------------------------------------------------ search
@@ -814,7 +1096,9 @@ class _SearchSheetState extends State<_SearchSheet> {
     final li = geoLangIndex(gs.lang);
     final res = _results();
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: SizedBox(
         height: MediaQuery.of(context).size.height * 0.7,
         child: Column(
@@ -826,27 +1110,40 @@ class _SearchSheetState extends State<_SearchSheet> {
                 decoration: InputDecoration(
                   prefixIcon: const Icon(Icons.search),
                   hintText: 'search_hint'.tr,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
                 onChanged: (v) => setState(() => q = v),
               ),
             ),
             Expanded(
-              child: res.isEmpty
-                  ? Empty('no_results'.tr)
-                  : ListView.builder(
-                      itemCount: res.length,
-                      itemBuilder: (ctx, i) {
-                        final p = res[i];
-                        final country = p.country >= 0 && p.country < widget.geo.countries.length ? widget.geo.countries[p.country].name(li) : '';
-                        return ListTile(
-                          leading: Icon(p.cap == 1 ? Icons.star : Icons.location_city, color: p.cap == 1 ? const Color(0xFFFFD166) : C.sub),
-                          title: Text(p.name(li)),
-                          subtitle: Text(country),
-                          onTap: () => widget.onPick(p),
-                        );
-                      },
-                    ),
+              child:
+                  res.isEmpty
+                      ? Empty('no_results'.tr)
+                      : ListView.builder(
+                        itemCount: res.length,
+                        itemBuilder: (ctx, i) {
+                          final p = res[i];
+                          final country =
+                              p.country >= 0 &&
+                                      p.country < widget.geo.countries.length
+                                  ? widget.geo.countries[p.country].name(li)
+                                  : '';
+                          return ListTile(
+                            leading: Icon(
+                              p.cap == 1 ? Icons.star : Icons.location_city,
+                              color:
+                                  p.cap == 1
+                                      ? const Color(0xFFFFD166)
+                                      : IosColors.of(context).secondary,
+                            ),
+                            title: Text(p.name(li)),
+                            subtitle: Text(country),
+                            onTap: () => widget.onPick(p),
+                          );
+                        },
+                      ),
             ),
           ],
         ),

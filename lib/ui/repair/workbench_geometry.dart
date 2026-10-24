@@ -15,6 +15,17 @@ class WorkbenchGeometry {
   Size get size => wide ? Size(1000 + extra, 680) : Size(700 + extra, 820);
   Rect get phone =>
       Rect.fromLTWH(wide ? 335 : 78, wide ? 104 : 160, 224 + extra, 438);
+  Rect visiblePhone(RepairSession s) {
+    if (segments == 1 || s.done('unfold')) return phone;
+    final count = (s.runtime.foldStage + 1).clamp(1, segments);
+    return Rect.fromLTWH(
+      phone.left,
+      phone.top,
+      phone.width * count / segments,
+      phone.height,
+    );
+  }
+
   Rect get parkedDisplay =>
       Rect.fromLTWH((wide ? 640 : 396) + extra, phone.top + 4, 224, 438);
   Rect get newTray =>
@@ -143,11 +154,11 @@ class WorkbenchGeometry {
       case 'edge_right':
         return at(224.0 * segments - 24, 24, 20, 388);
       case 'screen':
-        return s.isOpen ? parkedDisplay : p.deflate(8);
+        return s.isOpen ? parkedDisplay : visiblePhone(s).deflate(8);
       case 'front_display':
       case 'display_mount':
       case 'chassis':
-        return p;
+        return visiblePhone(s);
       case 'display_park':
         return parkedDisplay;
       case 'new_part':
@@ -159,7 +170,12 @@ class WorkbenchGeometry {
       case 'stored_shield':
         return partsTray.deflate(28);
       case 'power':
-        return at(224.0 * segments - 13, 85, 24, 62);
+        return Rect.fromLTWH(
+          visiblePhone(s).right - 13,
+          phone.top + 85,
+          24,
+          62,
+        );
       case 'frame_0':
         return at(49, 421, 18, 18);
       case 'frame_1':

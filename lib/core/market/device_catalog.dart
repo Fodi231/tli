@@ -23,6 +23,11 @@ class DeviceSpec {
           ? 2
           : 1;
   bool get apple => brand == 'Apple';
+
+  /// Built-in magnetic alignment, not ordinary Qi charging or a magnetic case.
+  bool get magSafe =>
+      const {'iphone12', 'iphone13', 'iphone15pro', 'iphoneduo'}.contains(id);
+  bool get wirelessCharging => true;
   String get system =>
       apple
           ? 'iOS'
@@ -31,14 +36,18 @@ class DeviceSpec {
           : brand == 'HUAWEI'
           ? 'HarmonyOS'
           : 'Android';
-  double get closedAspect =>
-      id == 'iphoneduo'
-          ? 84.1 / 117.8
-          : id == 'galaxyfold7'
-          ? 72.8 / 158.4
-          : id == 'matext'
-          ? 73.5 / 156.7
-          : .5114;
+  double get closedAspect => switch (id) {
+    'iphoneduo' => 84.1 / 117.8,
+    'galaxyfold7' => 72.8 / 158.4,
+    'matext' => 73.5 / 156.7,
+    'iphone11' => 75.7 / 150.9,
+    'iphone12' || 'iphone13' => 71.5 / 146.7,
+    'iphone15pro' => 70.6 / 146.6,
+    'galaxys22' => 70.6 / 146.0,
+    'galaxys23' => 70.9 / 146.3,
+    'pixel7' => 73.2 / 155.6,
+    _ => .5114,
+  };
   int get bootMs =>
       apple
           ? 12000

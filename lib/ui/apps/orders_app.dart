@@ -21,8 +21,9 @@ class _OrdersAppState extends State<OrdersApp> {
   @override
   Widget build(BuildContext context) {
     final gs = context.watch<GameState>();
-    final list = gs.orders.where((o) => filter == 'all' || o.status == filter).toList()
-      ..sort((a, b) => a.status.compareTo(b.status));
+    final list =
+        gs.orders.where((o) => filter == 'all' || o.status == filter).toList()
+          ..sort((a, b) => a.status.compareTo(b.status));
     return AppPage(
       title: 'orders_title'.tr,
       child: Column(
@@ -35,13 +36,14 @@ class _OrdersAppState extends State<OrdersApp> {
           ),
           const SizedBox(height: 8),
           Expanded(
-            child: list.isEmpty
-                ? Empty('no_orders'.tr)
-                : ListView.separated(
-                    itemCount: list.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
-                    itemBuilder: (_, i) => OrderCard(order: list[i]),
-                  ),
+            child:
+                list.isEmpty
+                    ? Empty('no_orders'.tr)
+                    : ListView.separated(
+                      itemCount: list.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (_, i) => OrderCard(order: list[i]),
+                    ),
           ),
         ],
       ),
@@ -58,47 +60,85 @@ class OrderCard extends StatelessWidget {
     final gs = context.watch<GameState>();
     final s = services[order.service]!;
     final km = gs.distanceKm(order.lat, order.lng);
+    final p = IosColors.of(context);
     return Panel(
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(color: C.card2, borderRadius: BorderRadius.circular(12)),
-            child: Icon(serviceIcon(order.service), color: C.accent),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(s.nameKey.tr, style: const TextStyle(fontWeight: FontWeight.w600)),
-                Text(order.device, style: const TextStyle(color: C.sub, fontSize: 12)),
-                Text('${km.toStringAsFixed(1)} km', style: const TextStyle(color: C.sub, fontSize: 12)),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          Row(
             children: [
-              Text(money(order.price), style: const TextStyle(color: C.green, fontWeight: FontWeight.w700, fontSize: 16)),
-              const SizedBox(height: 4),
-              if (order.status == 'available')
-                FilledButton(
-                  style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
-                  onPressed: () => context.read<GameState>().acceptOrder(order),
-                  child: Text('accept'.tr),
-                )
-              else if (order.status == 'active')
-                FilledButton(
-                  style: FilledButton.styleFrom(visualDensity: VisualDensity.compact, backgroundColor: C.orange),
-                  onPressed: () => context.read<Shell>().open('repair', arg: order.id),
-                  child: Text('start_repair'.tr),
-                )
-              else
-                const Icon(Icons.check_circle, color: C.green),
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: p.blue.withValues(alpha: .10),
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Icon(serviceIcon(order.service), color: p.blue),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      s.nameKey.tr,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      order.device,
+                      style: TextStyle(color: p.secondary, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+              if (order.status == 'done')
+                Icon(Icons.check_circle_rounded, color: p.green),
             ],
           ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 12,
+            runSpacing: 5,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                money(order.price),
+                style: TextStyle(
+                  color: p.green,
+                  fontSize: 23,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Text(
+                '${km.toStringAsFixed(1)} km',
+                style: TextStyle(color: p.secondary, fontSize: 12),
+              ),
+            ],
+          ),
+          if (order.status != 'done') ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed:
+                    () =>
+                        order.status == 'available'
+                            ? context.read<GameState>().acceptOrder(order)
+                            : context.read<Shell>().open(
+                              'repair',
+                              arg: order.id,
+                            ),
+                child: Text(
+                  (order.status == 'available' ? 'accept' : 'start_repair').tr,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

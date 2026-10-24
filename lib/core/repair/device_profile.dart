@@ -52,8 +52,17 @@ class DeviceProfile {
   };
   bool get pixel => id == 'pixel7';
   bool get apple => id.startsWith('iphone');
+  String get manufacturer => deviceFor(id)!.brand;
+  String get modelName => deviceFor(id)!.name;
   bool get frameScrews => apple && !rearAccess;
-  double get bodyWidth => id == 'iphoneduo' ? 626.4 : segments * 224.0;
+  double get bodyWidth =>
+      segments == 1
+          ? deviceFor(id)!.closedAspect * 438
+          : id == 'iphoneduo'
+          ? 612.0
+          : id == 'matext'
+          ? 612.2
+          : 448.0;
   int get batteryMah => deviceFor(id)!.batteryMah;
   PartBox get port =>
       id == 'iphoneduo'
@@ -133,7 +142,7 @@ const repairProfiles = <DeviceProfile>[
     batterySocketY: 278,
     displaySocketX: 43,
     displaySocketY: 240,
-    lBattery: true,
+    lBattery: false,
     portType: 'USB-C',
   ),
   DeviceProfile(
@@ -191,9 +200,9 @@ const repairProfiles = <DeviceProfile>[
     batteryCode: 'Dual battery',
     access: 'rear',
     segments: 2,
-    battery: PartBox(17, 108, 173, 258),
-    auxiliaryBatteries: [PartBox(249, 58, 175, 308)],
-    camera: PartBox(17, 20, 114, 89),
+    battery: PartBox(20, 119, 177, 263),
+    auxiliaryBatteries: [PartBox(249, 100, 175, 266)],
+    camera: PartBox(28, 29, 100, 80),
     board: PartBox(143, 102, 74, 160),
     shield: PartBox(153, 133, 58, 140),
     lenses: [Lens(.25, .5, .22), Lens(.73, .5, .22)],
@@ -210,11 +219,11 @@ const repairProfiles = <DeviceProfile>[
     batteryCode: 'Dual battery · 4400 mAh',
     access: 'rear',
     segments: 2,
-    battery: PartBox(52, 180, 145, 205),
-    auxiliaryBatteries: [PartBox(269, 177, 145, 205)],
-    camera: PartBox(22, 20, 105, 126),
-    board: PartBox(313, 22, 111, 114),
-    shield: PartBox(247, 130, 180, 245),
+    battery: PartBox(35, 181, 164, 204),
+    auxiliaryBatteries: [PartBox(270, 98, 145, 288)],
+    camera: PartBox(34, 20, 54, 142),
+    board: PartBox(102, 24, 105, 125),
+    shield: PartBox(105, 30, 100, 117),
     lenses: [Lens(.5, .17, .28), Lens(.5, .50, .28), Lens(.5, .83, .28)],
     batterySocketX: 166,
     batterySocketY: 129,
@@ -229,14 +238,14 @@ const repairProfiles = <DeviceProfile>[
     batteryCode: 'Distributed battery · 5600 mAh',
     access: 'rear',
     segments: 3,
-    battery: PartBox(22, 150, 178, 250),
+    battery: PartBox(40, 214, 153, 184),
     auxiliaryBatteries: [
-      PartBox(246, 150, 178, 250),
-      PartBox(474, 150, 176, 250),
+      PartBox(252, 87, 170, 313),
+      PartBox(478, 96, 173, 307),
     ],
-    camera: PartBox(22, 20, 105, 126),
-    board: PartBox(575, 24, 75, 132),
-    shield: PartBox(468, 158, 184, 220),
+    camera: PartBox(44, 50, 104, 115),
+    board: PartBox(132, 24, 75, 130),
+    shield: PartBox(152, 44, 53, 110),
     lenses: [Lens(.27, .25, .21), Lens(.74, .25, .21), Lens(.5, .72, .23)],
     batterySocketX: 166,
     batterySocketY: 109,

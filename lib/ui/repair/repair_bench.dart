@@ -918,6 +918,12 @@ class WorkbenchViewState extends State<WorkbenchView>
       );
     }
   });
+  late final AnimationController _flip = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 650),
+    value: 1,
+  );
+  bool? _flipFromRear;
   final Set<int> _pointers = {};
   Size _viewport = Size.zero;
   WorkbenchGeometry _geometry = WorkbenchGeometry(true);
@@ -942,11 +948,14 @@ class WorkbenchViewState extends State<WorkbenchView>
     dragTarget: _drag,
     dragPosition: _dragPosition,
     photo: _photo,
+    flipProgress: _flip.value,
+    flipFromRear: _flipFromRear,
   );
   @override
   void dispose() {
     _pulse.dispose();
     _hold.dispose();
+    _flip.dispose();
     super.dispose();
   }
 
@@ -998,6 +1007,7 @@ class WorkbenchViewState extends State<WorkbenchView>
   }
 
   void _pointerDown(PointerDownEvent e) {
+    if (_flip.isAnimating) return;
     _pointers.add(e.pointer);
     if (_pointers.length > 1) {
       cancelInteraction();
@@ -1084,7 +1094,12 @@ class WorkbenchViewState extends State<WorkbenchView>
           destination: _geometry.dropZone(_dragPosition!, widget.session),
         );
       } else if (!_moved) {
+        final before = widget.session.rearSideUp;
         widget.onAction(target, RepairGesture.tap);
+        if (before != widget.session.rearSideUp) {
+          _flipFromRear = before;
+          _flip.forward(from: 0);
+        }
       }
     }
     _pointers.remove(e.pointer);
@@ -1148,7 +1163,7 @@ class WorkbenchViewState extends State<WorkbenchView>
               },
               child: ClipRect(
                 child: AnimatedBuilder(
-                  animation: Listenable.merge([_pulse, _hold]),
+                  animation: Listenable.merge([_pulse, _hold, _flip]),
                   builder:
                       (context, _) =>
                           CustomPaint(painter: _painter, size: c.biggest),

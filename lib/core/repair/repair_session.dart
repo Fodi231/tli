@@ -83,6 +83,10 @@ List<RepairStep> repairRecipe(String service, [String device = 'iphone13']) {
     const RepairStep('power_off', RepairTool.hand, RepairGesture.hold, [
       'power',
     ]),
+    if (profile.rearAccess)
+      const RepairStep('flip_rear', RepairTool.hand, RepairGesture.tap, [
+        'chassis',
+      ]),
     if (profile.segments > 1)
       const RepairStep('unfold', RepairTool.hand, RepairGesture.tap, [
         'chassis',
@@ -92,7 +96,9 @@ List<RepairStep> repairRecipe(String service, [String device = 'iphone13']) {
         'frame_0',
         'frame_1',
       ], turns: 3),
-    const RepairStep('heat', RepairTool.heater, RepairGesture.hold, ['screen']),
+    RepairStep('heat', RepairTool.heater, RepairGesture.hold, [
+      'screen',
+    ], caption: profile.rearAccess ? 'heat_back' : null),
     const RepairStep('lift_edge', RepairTool.suction, RepairGesture.hold, [
       'screen',
     ]),
@@ -237,12 +243,16 @@ List<RepairStep> repairRecipe(String service, [String device = 'iphone13']) {
         'frame_0',
         'frame_1',
       ], turns: 3),
+    if (profile.rearAccess)
+      const RepairStep('flip_test_front', RepairTool.hand, RepairGesture.tap, [
+        'chassis',
+      ], caption: 'flip_front'),
     test,
   ];
 }
 
 class RepairSession {
-  static const int schemaVersion = 4;
+  static const int schemaVersion = 5;
   static const String practiceId = '__practice__';
   static const int holdDurationMs = 1200;
   final String orderId;
@@ -289,11 +299,15 @@ class RepairSession {
                       (current!.targets.length * current!.turns)) /
               steps.length;
   bool done(String id) => steps.take(_index).any((s) => s.id == id);
-  bool get frontFacing =>
+
+  /// Physical orientation is independent of electrical power. Old saves are
+  /// remapped by stable step id, so an open repair preserves its physical side.
+  bool get rearSideUp =>
       profileFor(device).rearAccess &&
-      service == 'display' &&
-      done('flip_front') &&
-      !done('flip_back');
+      done('flip_rear') &&
+      !done('flip_test_front') &&
+      !(done('flip_front') && !done('flip_back'));
+  bool get frontFacing => profileFor(device).rearAccess && !rearSideUp;
   bool get isOpen => done('open') && !done('close');
   bool get shieldRemoved => done('shield_out') && !done('shield_in');
   bool get batteryDisconnected =>
@@ -402,7 +416,7 @@ class RepairSession {
   };
 
   factory RepairSession.fromJson(Map<String, dynamic> json) {
-    if (!const [1, 2, 3, schemaVersion].contains(json['v']) ||
+    if (!const [1, 2, 3, 4, schemaVersion].contains(json['v']) ||
         !const [
           'display',
           'battery',

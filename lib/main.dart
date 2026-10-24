@@ -9,6 +9,8 @@ import 'core/game_state.dart';
 import 'core/theme.dart';
 import 'core/window_service.dart';
 import 'ui/phone_shell.dart';
+import 'ui/onboarding.dart';
+import 'ui/system_notice.dart';
 import 'ui/shell.dart';
 
 Future<void> main() async {
@@ -90,10 +92,18 @@ class _TechLifeAppState extends State<TechLifeApp> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final scale = context.select<GameState, double>((g) => g.textScale);
     final ui = context.select<GameState, int>((g) => g.uiScalePct) / 100.0;
+    final mode = context.select<GameState, int>((g) => g.themeMode);
     return MaterialApp(
       title: kAppName,
       debugShowCheckedModeBanner: false,
-      theme: buildTheme(),
+      theme: buildTheme(Brightness.light),
+      darkTheme: buildTheme(Brightness.dark),
+      themeMode:
+          mode == 0
+              ? ThemeMode.system
+              : mode == 1
+              ? ThemeMode.light
+              : ThemeMode.dark,
       builder: (context, child) {
         final mq = MediaQuery.of(
           context,
@@ -141,9 +151,22 @@ class _TechLifeAppState extends State<TechLifeApp> with WidgetsBindingObserver {
             child: Focus(autofocus: true, child: app),
           );
         }
-        return MediaQuery(data: mq, child: app);
+        return MediaQuery(data: mq, child: SystemNoticeHost(child: app));
       },
-      home: const PhoneShell(),
+      home: const GameEntry(),
     );
+  }
+}
+
+/// Existing saves bypass registration; a reset returns to the introduction.
+class GameEntry extends StatelessWidget {
+  const GameEntry({super.key});
+  @override
+  Widget build(BuildContext context) {
+    final g = context.watch<GameState>();
+    if (!g.ready) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    return g.onboardingComplete ? const PhoneShell() : const OnboardingScreen();
   }
 }

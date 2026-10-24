@@ -162,6 +162,26 @@ const _strings = <String, List<String>>{
     'Hold the heat gun to 65–85 °C and release. Above 105 °C overheats.',
     'Утримуйте фен до 65–85 °C та відпустіть. Понад 105 °C — перегрів.',
   ],
+  'r_step_flip_rear': [
+    'Перевернуть телефон задней крышкой вверх',
+    'Turn the phone rear cover up',
+    'Перевернути телефон задньою кришкою догори',
+  ],
+  'r_hint_flip_rear': [
+    'Выбери руку и нажми на корпус. Выключенный экран пока сверху.',
+    'Choose the hand and tap the chassis. The powered-off screen is still facing up.',
+    'Обери руку та натисни на корпус. Вимкнений екран поки зверху.',
+  ],
+  'r_step_heat_back': [
+    'Размягчить клей задней крышки',
+    'Soften the rear-cover adhesive',
+    'Розм’якшити клей задньої кришки',
+  ],
+  'r_hint_heat_back': [
+    'Удерживай фен на задней крышке до 65–85 °C, затем отпусти. Не выше 105 °C.',
+    'Hold the heat gun over the rear cover to 65–85 °C, then release. Never above 105 °C.',
+    'Утримуй фен на задній кришці до 65–85 °C, потім відпусти. Не вище 105 °C.',
+  ],
   'r_step_flip_front': [
     'Перевернуть корпус экраном вверх',
     'Turn the chassis screen-up',

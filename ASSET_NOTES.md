@@ -62,3 +62,11 @@ The internal art is a game interpretation, not a photogrammetric scan or a compl
 Device specifications are summarized as short factual values; source links are stored in the device catalog and shown by the listing detail screen. Seller descriptions, names, prices and faults are original fictional game content. TechMarket is an original in-game name; the app uses a familiar classifieds layout and does not copy Avito's logo, source code or private listings.
 
 `preview/phone_*.png`, `preview/market*.png` and `preview/interior_*.png` are captured from real Flutter widgets by the supplied tests. They are not AI mockups.
+
+## 0.8.0 — материалы пользователя
+
+- assets/icon/techmarket.png: присланная иконка-сумка из IMG_0091.jpeg. Убраны поля и обрезок соседнего текста; знак сохранён и размещён на светлом фоне. Это иконка приложения внутри игры; основной launcher TechLife прежний.
+- assets/wallpapers/peach.jpg, blue.jpg, teal.jpg, lavender.jpg: четыре присланных JPEG, скопированы без изменения изображения. Работают без сетевой загрузки.
+- Источник этих пяти файлов — вложения пользователя от 24.10.2026. Коммерческие права не проверялись; происхождение и разрешения нужно подтвердить перед публичным выпуском.
+
+preview/08_*.png: снимки действующих Flutter-виджетов с тестовым сохранением, не дизайн-макеты и не фотографии чужого устройства.

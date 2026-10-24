@@ -1,30 +1,30 @@
-TechLife 0.9.0 -> 0.10.0
-Also includes the intermediate progress patch.
-Copy these files over 0.9.0; no deletions. Run flutter pub get and rebuild.
-For Web update web_release on the same origin.
-Preview files are included in the full archive only.
+TechLife 0.11.1 -> 0.12.0: Luma bank
+Copy these files over full 0.11.1. No deletions.
+Native: flutter pub get, then rebuild. Web: deploy listed web_release files on the SAME origin.
+Preview exports are included in the full archive only.
 
+ASSET_NOTES.md
 CHANGED_FILES.txt
 README.md
-UPDATE_0_10_RU.md
-UPDATE_0_9_RU.md
+UPDATE_0_12_RU.md
 VALIDATION.md
-WEB_RUN_RU.md
+assets/icon/luma.jpg
 lib/core/app_info.dart
+lib/core/bank/luma_models.dart
+lib/core/bank/luma_state.dart
 lib/core/game_state.dart
-lib/core/repair/device_runtime.dart
-lib/core/repair/repair_session.dart
-lib/core/repair/repair_strings.dart
-lib/ui/repair/device_lab.dart
-lib/ui/repair/repair_bench.dart
-lib/ui/repair/workbench_geometry.dart
-lib/ui/repair/workbench_painter.dart
+lib/core/i18n.dart
+lib/ui/apps/bank_app.dart
+lib/ui/luma/luma_card.dart
+lib/ui/phone_shell.dart
 pubspec.yaml
-test/core/repair_economy_test.dart
-test/core/repair_session_test.dart
-test/core/unfinished_mechanics_test.dart
-test/ui/repair_bench_test.dart
+test/core/luma_test.dart
+test/ui/luma_test.dart
 web_release/.last_build_id
+web_release/assets/AssetManifest.bin
+web_release/assets/AssetManifest.bin.json
+web_release/assets/assets/icon/luma.jpg
+web_release/assets/fonts/MaterialIcons-Regular.otf
 web_release/flutter_bootstrap.js
 web_release/main.dart.js
 web_release/version.json

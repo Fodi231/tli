@@ -1,4 +1,12 @@
-# Assets for TechLife 0.9.0
+# Assets for TechLife 0.11.1
+
+## 0.11.1 — original transparent tool icons
+
+The eight tool photographs in the toolbar and repair hints are replaced by original generated stylized PNG icons under assets/repair/tools/*_icon.png. The built-in image generation tool was used; the first screwdriver icon anchors the visual style. The original hand and multimeter painter is unchanged. Prompt text is recorded in TOOL_ICONS_PROMPTS.json.
+
+## 0.11 — corrected layered repair artwork
+
+Fold7 and Mate XT now render clean_fold_chassis.png, original reference-guided game artwork created with the built-in image tool. Batteries are independent code-rendered elements, not pixels left inside a background. Classic photographic chassis exclude movable component regions; the photographed display-back images are no longer rendered because some contained fingers. Sources and constraints remain documented below. Generation prompts and the final workspace asset path are recorded in ASSET_PROMPTS_0_11.md. The new render is not a manufacturer service drawing.
 
 ## Current repair artwork, 0.9.0
 
@@ -82,3 +90,8 @@ Device specifications are summarized as short factual values; source links are s
 - Источник этих пяти файлов — вложения пользователя от 24.10.2026. Коммерческие права не проверялись; происхождение и разрешения нужно подтвердить перед публичным выпуском.
 
 preview/08_*.png: снимки действующих Flutter-виджетов с тестовым сохранением, не дизайн-макеты и не фотографии чужого устройства.
+
+
+## Luma — 0.12.0
+
+assets/icon/luma.jpg — изображение логотипа, предоставленное пользователем, скопировано без изменения. Макеты использованы как визуальные ориентиры, не как фон с невидимыми кнопками. Карты, чип, ленты и малая эмблема на карте нарисованы средствами Flutter, без внешних банковских ассетов.

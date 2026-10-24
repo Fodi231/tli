@@ -1,0 +1,66 @@
+{
+  "mode": "built-in image generation",
+  "date": "2026-10-24",
+  "transparent_background": true,
+  "style_reference": "assets/repair/tools/driver_icon.png",
+  "unchanged": [
+    "hand",
+    "meter"
+  ],
+  "assets": [
+    {
+      "file": "assets/repair/tools/driver_icon.png",
+      "prompt": "Use case: stylized-concept. Asset type: a SINGLE isolated toolbar icon for TechLife, a premium 2D phone-repair game. Subject: precision electronics SCREWDRIVER, one thick readable polished silver shaft and a chunky deep navy / electric cyan rubber handle with three simple grip ribs and a turquoise end cap. Diagonal from lower left metal tip to upper right handle, object occupies 80% of a square 1024x1024 canvas, balanced padding all around. Style: polished stylized 3D game inventory illustration, softly rounded forms, clean confident silhouette, restrained glossy edge highlights, gentle internal ambient occlusion, friendly premium craftsmanship. Palette: cyan and teal, charcoal navy, brushed silver, a tiny warm yellow collar accent. Lighting upper left, even detail; recognizable at 32px. NO photoreal product photo, no grunge, no white card, no floor, no scene, no shadow floating outside the object, no frame or button tile, no text, no logo, no watermark, no extra tools, no hands. Background must be truly transparent alpha. Output exactly one tool, not a grid or contact sheet.",
+      "references": []
+    },
+    {
+      "file": "assets/repair/tools/heater_icon.png",
+      "prompt": "Use case: stylized-concept. Asset type: SINGLE transparent toolbar icon for TechLife electronics repair game. Input image is STYLE REFERENCE ONLY; replace the screwdriver with the subject specified below, do not include the screwdriver. Match its premium stylized 3D game illustration: clean bold silhouette, chunky friendly forms, deep navy rubber and electric cyan/teal accents, brushed silver metal, a tiny warm yellow detail where useful, soft upper-left highlights, restrained ambient occlusion. Clear and readable at 32px, not a photograph. ONE centered tool occupying 80% of square 1024x1024 canvas with balanced padding. Truly transparent alpha background. NO floor, no cast shadow outside object, no white rectangle or tile, no border, no text, no logos, no watermark, no hands, no extra tools. Subject: compact precision HOT-AIR HEAT GUN, recognizable L shape. Short wide silver cylindrical nozzle points upper-left, rounded navy body with cyan vent panels, chunky cyan grip points lower-right, tiny amber power switch. Two small clean amber heat-flow arcs right at the nozzle, no smoke or fire. Three-quarter product illustration.",
+      "references": [
+        "assets/repair/tools/driver_icon.png"
+      ]
+    },
+    {
+      "file": "assets/repair/tools/suction_icon.png",
+      "prompt": "Use case: stylized-concept. Asset type: SINGLE transparent toolbar icon for TechLife electronics repair game. Input image is STYLE REFERENCE ONLY; replace the screwdriver with the subject specified below, do not include the screwdriver. Match its premium stylized 3D game illustration: clean bold silhouette, chunky friendly forms, deep navy rubber and electric cyan/teal accents, brushed silver metal, a tiny warm yellow detail where useful, soft upper-left highlights, restrained ambient occlusion. Clear and readable at 32px, not a photograph. ONE centered tool occupying 80% of square 1024x1024 canvas with balanced padding. Truly transparent alpha background. NO floor, no cast shadow outside object, no white rectangle or tile, no border, no text, no logos, no watermark, no hands, no extra tools. Subject: repair SUCTION CUP tool. A broad circular dark teal rubber suction disk shown in three-quarter view, chunky cyan pull handle / short arched grip mounted above it, small brushed-silver hinge. Clear circular cup silhouette, one complete compact tool.",
+      "references": [
+        "assets/repair/tools/driver_icon.png"
+      ]
+    },
+    {
+      "file": "assets/repair/tools/spudger_icon.png",
+      "prompt": "Use case: stylized-concept. Asset type: SINGLE transparent toolbar icon for TechLife electronics repair game. Input image is STYLE REFERENCE ONLY; replace the screwdriver with the subject specified below, do not include the screwdriver. Match its premium stylized 3D game illustration: clean bold silhouette, chunky friendly forms, deep navy rubber and electric cyan/teal accents, brushed silver metal, a tiny warm yellow detail where useful, soft upper-left highlights, restrained ambient occlusion. Clear and readable at 32px, not a photograph. ONE centered tool occupying 80% of square 1024x1024 canvas with balanced padding. Truly transparent alpha background. NO floor, no cast shadow outside object, no white rectangle or tile, no border, no text, no logos, no watermark, no hands, no extra tools. Subject: plastic electronics SPUDGER PRY TOOL. A single long solid graphite/navy pry stick with turquoise rounded center grip, one broad flat wedge/spatula tip in pale cool silver-grey, opposing end a blunt tapered small pry point. Thick stylized readable construction, diagonal lower-left to upper-right. Not a screwdriver or knife, no blades.",
+      "references": [
+        "assets/repair/tools/driver_icon.png"
+      ]
+    },
+    {
+      "file": "assets/repair/tools/tweezers_icon.png",
+      "prompt": "Use case: stylized-concept. Asset type: SINGLE transparent toolbar icon for TechLife electronics repair game. Input image is STYLE REFERENCE ONLY; replace the screwdriver with the subject specified below, do not include the screwdriver. Match its premium stylized 3D game illustration: clean bold silhouette, chunky friendly forms, deep navy rubber and electric cyan/teal accents, brushed silver metal, a tiny warm yellow detail where useful, soft upper-left highlights, restrained ambient occlusion. Clear and readable at 32px, not a photograph. ONE centered tool occupying 80% of square 1024x1024 canvas with balanced padding. Truly transparent alpha background. NO floor, no cast shadow outside object, no white rectangle or tile, no border, no text, no logos, no watermark, no hands, no extra tools. Subject: precision ESD TWEEZERS. Exactly two slim polished-silver arms gently separated at the working tips, joined at the thick upper-right base, open tips pointing lower-left. Dark navy/cyan rubber grip bands near the base. Readable elongated V silhouette, not scissors, not pliers. Slight three-quarter bevel and bright metal edges.",
+      "references": [
+        "assets/repair/tools/driver_icon.png"
+      ]
+    },
+    {
+      "file": "assets/repair/tools/solvent_icon.png",
+      "prompt": "Use case: stylized-concept. Asset type: SINGLE transparent toolbar icon for TechLife electronics repair game. Input image is STYLE REFERENCE ONLY; replace the screwdriver with the subject specified below, do not include the screwdriver. Match its premium stylized 3D game illustration: clean bold silhouette, chunky friendly forms, deep navy rubber and electric cyan/teal accents, brushed silver metal, a tiny warm yellow detail where useful, soft upper-left highlights, restrained ambient occlusion. Clear and readable at 32px, not a photograph. ONE centered tool occupying 80% of square 1024x1024 canvas with balanced padding. Truly transparent alpha background. NO floor, no cast shadow outside object, no white rectangle or tile, no border, no text, no logos, no watermark, no hands, no extra tools. Subject: IPA electronics cleaning BOTTLE. Compact translucent frosted cyan bottle filled with turquoise liquid, dark navy cap and short pale-silver precision dispenser nozzle with a tiny cyan droplet at its tip. Wide readable rounded bottle silhouette, subtle white highlight. No label text or lettering, no brand. Three-quarter view, upright with a slight tilt.",
+      "references": [
+        "assets/repair/tools/driver_icon.png"
+      ]
+    },
+    {
+      "file": "assets/repair/tools/pick_icon.png",
+      "prompt": "Use case: stylized-concept. Asset type: SINGLE transparent toolbar icon for TechLife electronics repair game. Input image is STYLE REFERENCE ONLY; replace the screwdriver with the subject specified below, do not include the screwdriver. Match its premium stylized 3D game illustration: clean bold silhouette, chunky friendly forms, deep navy rubber and electric cyan/teal accents, brushed silver metal, a tiny warm yellow detail where useful, soft upper-left highlights, restrained ambient occlusion. Clear and readable at 32px, not a photograph. ONE centered tool occupying 80% of square 1024x1024 canvas with balanced padding. Truly transparent alpha background. NO floor, no cast shadow outside object, no white rectangle or tile, no border, no text, no logos, no watermark, no hands, no extra tools. Subject: blue plastic OPENING PICK for separating phone screen adhesive. ONE broad rounded triangular guitar-pick-shaped pry chip, electric cyan face, deep navy beveled rim, subtle inset curved grip detail. Mostly front facing with slight 3D thickness visible along lower-right edge, small gleam at top-left. A solid triangular chip, no hole, no extra picks.",
+      "references": [
+        "assets/repair/tools/driver_icon.png"
+      ]
+    },
+    {
+      "file": "assets/repair/tools/adhesive_icon.png",
+      "prompt": "Use case: stylized-concept. Asset type: SINGLE transparent toolbar icon for TechLife electronics repair game. Input image is STYLE REFERENCE ONLY; replace the screwdriver with the subject specified below, do not include the screwdriver. Match its premium stylized 3D game illustration: clean bold silhouette, chunky friendly forms, deep navy rubber and electric cyan/teal accents, brushed silver metal, a tiny warm yellow detail where useful, soft upper-left highlights, restrained ambient occlusion. Clear and readable at 32px, not a photograph. ONE centered tool occupying 80% of square 1024x1024 canvas with balanced padding. Truly transparent alpha background. NO floor, no cast shadow outside object, no white rectangle or tile, no border, no text, no logos, no watermark, no hands, no extra tools. Subject: PRE-CUT PHONE FRAME ADHESIVE GASKET. One clearly visible tall rounded rectangular turquoise/cyan adhesive outline with a LARGE transparent open center. Navy edge for depth, tiny warm-yellow peel tab at upper-right, a short corner of white release liner visibly peeled back. Three-quarter shallow view. This is a single phone perimeter seal, not a phone, not a bottle, not a solid sheet; the interior must remain transparent.",
+      "references": [
+        "assets/repair/tools/driver_icon.png"
+      ]
+    }
+  ]
+}
